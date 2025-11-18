@@ -6,7 +6,6 @@ CRITICAL configurations for ML models, media files, and security
 
 import os
 from pathlib import Path
-from decouple import config  # For environment variables (optional)
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -40,7 +39,6 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "whitenoise.middleware.WhiteNoiseMiddleware",  # For static files in production
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -123,9 +121,6 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
-
-# Static files storage (for production)
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 
 # Media files (Uploaded X-rays, predictions, heatmaps)
@@ -210,21 +205,8 @@ os.makedirs(BASE_DIR / "logs", exist_ok=True)
 
 
 # ===========================================================================
-# 🔥 ML MODEL SETTINGS (CRITICAL FOR YOUR FYP)
+# 🔥 ML MODEL SETTINGS (Placeholder - PyTorch not installed yet)
 # ===========================================================================
-
-# PyTorch/CUDA Settings
-# Use GPU if available (RTX 4060 8GB)
-import torch
-
-USE_CUDA = torch.cuda.is_available()
-DEVICE = "cuda" if USE_CUDA else "cpu"
-
-if USE_CUDA:
-    print(f"🔥 CUDA Available! Using GPU: {torch.cuda.get_device_name(0)}")
-    print(f"   VRAM: {torch.cuda.get_device_properties(0).total_memory / 1e9:.2f} GB")
-else:
-    print("⚠️ CUDA not available. Using CPU (will be slow!)")
 
 # Model weights directory
 MODEL_WEIGHTS_DIR = BASE_DIR / "static" / "ml_models"
@@ -260,25 +242,6 @@ if not DEBUG:
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
     X_FRAME_OPTIONS = "DENY"
-
-
-# ===========================================================================
-# OPTIONAL: Email settings (for password reset, notifications)
-# ===========================================================================
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = 'your-email@gmail.com'
-# EMAIL_HOST_PASSWORD = 'your-app-password'
-
-
-# ===========================================================================
-# CELERY SETTINGS (Optional - for background tasks)
-# ===========================================================================
-# If you want to run model predictions in background:
-# CELERY_BROKER_URL = 'redis://localhost:6379/0'
-# CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 
 
 # ===========================================================================
@@ -319,14 +282,13 @@ print(
    Student: {STUDENT_NAME} ({STUDENT_ID})
    Supervisor: {SUPERVISOR}
    Institution: {UNIVERSITY}
-   
+
 🔧 System Configuration:
    - Debug Mode: {DEBUG}
-   - Device: {DEVICE}
    - Database: {DATABASES['default']['ENGINE']}
    - Media Root: {MEDIA_ROOT}
    - Static Root: {STATIC_ROOT}
-   
+
 ✅ Ready to start!
 {'='*80}
 """

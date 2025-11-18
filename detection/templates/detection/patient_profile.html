@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+
+{% block title %}Patient Profile - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-person-circle"></i> Patient Profile</h2>
+
+<div class="card">
+    <div class="card-body">
+        <p class="text-muted">Patient profile information</p>
+        <a href="{% url 'detection:patient_dashboard' %}" class="btn btn-primary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

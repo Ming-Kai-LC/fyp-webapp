@@ -1,0 +1,144 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-5">
+        <h1 class="display-4 fw-bold">COVID-19 Detection System</h1>
+        <p class="lead text-muted">Advanced AI-powered chest X-ray analysis using CrossViT and multi-model comparison</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-cpu display-1 text-primary mb-3"></i>
+                <h5 class="card-title">Multi-Model Analysis</h5>
+                <p class="card-text">Compare predictions from 6 state-of-the-art AI models including CrossViT, ResNet-50, DenseNet-121, EfficientNet, ViT, and Swin Transformer.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-eye display-1 text-success mb-3"></i>
+                <h5 class="card-title">Explainable AI</h5>
+                <p class="card-text">Understand AI decisions with Grad-CAM heatmaps and dual-branch attention visualization unique to CrossViT architecture.</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card h-100 text-center">
+            <div class="card-body">
+                <i class="bi bi-shield-check display-1 text-info mb-3"></i>
+                <h5 class="card-title">Clinical Ready</h5>
+                <p class="card-text">Role-based access control, comprehensive admin panel, and prediction validation workflow for clinical deployment.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if user.is_authenticated %}
+    <div class="row mb-4">
+        <div class="col-md-6 mx-auto">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title mb-4">Welcome, {{ user.get_full_name|default:user.username }}!</h5>
+
+                    {% if user.profile.is_doctor %}
+                        <p class="text-muted mb-4">You are logged in as a <strong>Doctor</strong></p>
+                        <a href="{% url 'detection:upload_xray' %}" class="btn btn-primary btn-lg me-2">
+                            <i class="bi bi-cloud-upload"></i> Upload X-Ray
+                        </a>
+                        <a href="{% url 'detection:doctor_dashboard' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-speedometer2"></i> Dashboard
+                        </a>
+                    {% elif user.profile.is_patient %}
+                        <p class="text-muted mb-4">You are logged in as a <strong>Patient</strong></p>
+                        <a href="{% url 'detection:patient_dashboard' %}" class="btn btn-primary btn-lg me-2">
+                            <i class="bi bi-speedometer2"></i> My Dashboard
+                        </a>
+                        <a href="{% url 'detection:prediction_history' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="bi bi-clock-history"></i> My Results
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-4">You are logged in as an <strong>Administrator</strong></p>
+                        <a href="{% url 'admin:index' %}" class="btn btn-primary btn-lg">
+                            <i class="bi bi-gear"></i> Admin Panel
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if total_predictions > 0 %}
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h1 class="display-3 text-primary">{{ total_predictions }}</h1>
+                        <p class="text-muted">Total Predictions</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card text-center">
+                    <div class="card-body">
+                        <h1 class="display-3 text-success">{{ total_patients }}</h1>
+                        <p class="text-muted">Total Patients</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+{% else %}
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-body text-center p-5">
+                    <h3 class="mb-4">Get Started</h3>
+                    <p class="text-muted mb-4">Create an account or login to access the COVID-19 detection system</p>
+                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg me-2">
+                        <i class="bi bi-person-plus"></i> Register
+                    </a>
+                    <a href="{% url 'login' %}" class="btn btn-outline-primary btn-lg">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<div class="row mt-5">
+    <div class="col-12">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-info-circle"></i> About This System</h5>
+                <p class="card-text">
+                    This COVID-19 Detection System is a Final Year Project (FYP) developed for TAR UMT's
+                    Bachelor of Data Science program. The system utilizes state-of-the-art deep learning
+                    models to analyze chest X-ray images and provide multi-model predictions with
+                    explainability features.
+                </p>
+                <p class="card-text">
+                    <strong>Key Features:</strong>
+                </p>
+                <ul>
+                    <li><strong>Spotlight Feature #1:</strong> Multi-model comparison across 6 architectures</li>
+                    <li><strong>Spotlight Feature #2:</strong> Explainable AI with Grad-CAM and attention visualization</li>
+                    <li>CLAHE preprocessing for enhanced image quality</li>
+                    <li>Role-based access control (Admin, Doctor, Patient)</li>
+                    <li>Comprehensive admin panel for system management</li>
+                    <li>Memory-optimized for RTX 4060 8GB VRAM</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
