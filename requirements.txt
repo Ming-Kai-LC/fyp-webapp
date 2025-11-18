@@ -1,7 +1,7 @@
 # Core Django
 Django==4.2.7
-django-crispy-forms==2.1
-crispy-bootstrap5==2.0.0
+django-crispy-forms>=2.3
+crispy-bootstrap5==2024.10
 
 # Database
 psycopg2-binary==2.9.9  # PostgreSQL support (optional)
@@ -29,6 +29,13 @@ xhtml2pdf==0.2.13         # Fallback PDF generator
 openpyxl==3.1.2          # Excel file generation
 qrcode[pil]==7.4.2       # QR code generation
 Pillow==10.1.0           # Already included (image processing)
+
+# REST API Dependencies
+djangorestframework==3.14.0
+djangorestframework-simplejwt==5.3.0
+drf-yasg==1.21.7
+django-cors-headers==4.3.0
+django-filter==23.5
 
 # Other utilities
 python-dateutil==2.8.2
