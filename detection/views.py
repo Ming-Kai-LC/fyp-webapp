@@ -23,6 +23,7 @@ from .forms import (
 from .ml_engine_stub import model_ensemble
 from .preprocessing_stub import apply_clahe
 from .explainability_stub import generate_explainability_report
+from notifications.services import NotificationService
 
 import os
 import logging
@@ -220,6 +221,13 @@ def upload_xray(request):
                 )
 
                 logger.info(f"✅ Prediction saved: ID={prediction.id}")
+
+                # Send notification to patient
+                try:
+                    NotificationService.send_prediction_notification(prediction)
+                    logger.info(f"📧 Notification sent for prediction ID={prediction.id}")
+                except Exception as e:
+                    logger.error(f"❌ Failed to send notification: {e}")
 
                 messages.success(
                     request,
