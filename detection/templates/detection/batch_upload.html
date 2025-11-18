@@ -1,0 +1,127 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Batch Upload X-Rays - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-10 mx-auto">
+        <h2 class="mb-4"><i class="bi bi-cloud-upload-fill"></i> Batch Upload Chest X-Rays</h2>
+
+        <div class="alert alert-primary">
+            <i class="bi bi-info-circle-fill"></i>
+            <strong>Batch Processing:</strong> Upload multiple X-ray images (up to 50) for asynchronous processing.
+            All images will be processed in the background, and you can track progress in real-time.
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-upload"></i> Upload Images</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data" id="batchUploadForm">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Instructions:</strong>
+                        <ul class="mb-0">
+                            <li>Select multiple X-ray images (1-50 images)</li>
+                            <li>Supported formats: JPG, JPEG, PNG</li>
+                            <li>Maximum size per image: 10MB</li>
+                            <li>CLAHE preprocessing is recommended for better results</li>
+                        </ul>
+                    </div>
+
+                    <div id="filePreview" class="mb-3" style="display: none;">
+                        <h6>Selected Files:</h6>
+                        <div id="fileList" class="small text-muted"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-send-fill"></i> Start Batch Processing
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-gear-fill"></i> How It Works</h5>
+                        <ol>
+                            <li>Select multiple X-ray images for a patient</li>
+                            <li>Images are uploaded and queued for processing</li>
+                            <li>Each image is processed asynchronously with CLAHE</li>
+                            <li>AI models analyze each X-ray independently</li>
+                            <li>Track progress in real-time on the job detail page</li>
+                            <li>Review all results once processing is complete</li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title"><i class="bi bi-clock-history"></i> Recent Batch Jobs</h5>
+                        <p>View and manage your batch upload jobs:</p>
+                        <a href="{% url 'detection:batch_job_list' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-list-ul"></i> View All Batch Jobs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Show file preview when files are selected
+document.getElementById('id_images').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const preview = document.getElementById('filePreview');
+    const fileList = document.getElementById('fileList');
+
+    if (files.length > 0) {
+        let html = `<strong>${files.length} file(s) selected:</strong><ul class="mt-2">`;
+        for (let i = 0; i < Math.min(files.length, 10); i++) {
+            const size = (files[i].size / 1024 / 1024).toFixed(2);
+            html += `<li>${files[i].name} (${size} MB)</li>`;
+        }
+        if (files.length > 10) {
+            html += `<li><em>... and ${files.length - 10} more</em></li>`;
+        }
+        html += '</ul>';
+        fileList.innerHTML = html;
+        preview.style.display = 'block';
+
+        // Validate file count
+        if (files.length > 50) {
+            alert('Maximum 50 files allowed. Please select fewer files.');
+            e.target.value = '';
+            preview.style.display = 'none';
+        }
+    } else {
+        preview.style.display = 'none';
+    }
+});
+
+// Form submission confirmation
+document.getElementById('batchUploadForm').addEventListener('submit', function(e) {
+    const files = document.getElementById('id_images').files;
+    if (files.length === 0) {
+        alert('Please select at least one image file.');
+        e.preventDefault();
+        return false;
+    }
+
+    if (!confirm(`Upload ${files.length} image(s) for batch processing?`)) {
+        e.preventDefault();
+        return false;
+    }
+});
+</script>
+{% endblock %}

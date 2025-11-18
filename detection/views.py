@@ -13,12 +13,13 @@ from django.views.decorators.http import require_POST
 from django.db.models import Count, Q
 from django.utils import timezone
 
-from .models import XRayImage, Prediction, Patient, UserProfile
+from .models import XRayImage, Prediction, Patient, UserProfile, BatchUploadJob, BatchUploadImage
 from .forms import (
     XRayUploadForm,
     UserRegistrationForm,
     PatientProfileForm,
     DoctorNotesForm,
+    BatchXRayUploadForm,
 )
 from .ml_engine_stub import model_ensemble
 from .preprocessing_stub import apply_clahe
@@ -475,6 +476,281 @@ def patient_profile(request):
         form = PatientProfileForm(instance=patient)
 
     return render(request, "detection/patient_profile.html", {"form": form})
+
+
+# ============================================================================
+# BATCH UPLOAD VIEWS
+# ============================================================================
+
+
+@login_required
+def batch_upload(request):
+    """
+    Batch upload multiple X-ray images for processing
+    Doctors only - allows uploading 1-50 images at once
+    """
+    if not request.user.profile.is_doctor():
+        messages.error(request, "Access denied. Doctors only.")
+        return redirect("home")
+
+    if request.method == "POST":
+        form = BatchXRayUploadForm(request.POST, request.FILES)
+
+        if form.is_valid():
+            try:
+                # Get form data
+                patient = form.cleaned_data['patient']
+                apply_clahe = form.cleaned_data['apply_clahe']
+                notes = form.cleaned_data.get('notes', '')
+
+                # Get uploaded files (Django handles multiple files)
+                files = request.FILES.getlist('images')
+
+                # Validate number of files
+                if not files:
+                    messages.error(request, "No images were uploaded.")
+                    return render(request, "detection/batch_upload.html", {"form": form})
+
+                if len(files) > 50:
+                    messages.error(request, "Maximum 50 images allowed per batch.")
+                    return render(request, "detection/batch_upload.html", {"form": form})
+
+                # Create batch job
+                batch_job = BatchUploadJob.objects.create(
+                    created_by=request.user,
+                    patient=patient,
+                    total_images=len(files),
+                    apply_clahe=apply_clahe,
+                    notes=notes
+                )
+
+                # Save uploaded files as BatchUploadImage records
+                for idx, file in enumerate(files):
+                    BatchUploadImage.objects.create(
+                        batch_job=batch_job,
+                        image_file=file,
+                        original_filename=file.name,
+                        order=idx
+                    )
+
+                logger.info(
+                    f"Created batch job {batch_job.job_id} with {len(files)} images "
+                    f"for patient {patient.id}"
+                )
+
+                # Queue the batch processing task
+                from .tasks import process_batch_upload
+                task = process_batch_upload.delay(batch_job.id)
+
+                batch_job.celery_task_id = task.id
+                batch_job.save()
+
+                messages.success(
+                    request,
+                    f"Batch upload started! Processing {len(files)} images. "
+                    f"Job ID: {batch_job.job_id}"
+                )
+
+                return redirect("detection:batch_job_detail", job_id=batch_job.job_id)
+
+            except Exception as e:
+                logger.error(f"Error creating batch job: {e}", exc_info=True)
+                messages.error(request, f"Error creating batch upload: {str(e)}")
+                return render(request, "detection/batch_upload.html", {"form": form})
+    else:
+        form = BatchXRayUploadForm()
+
+    # Get list of patients for dropdown
+    patients = Patient.objects.all().select_related("user")
+
+    context = {
+        "form": form,
+        "patients": patients
+    }
+
+    return render(request, "detection/batch_upload.html", context)
+
+
+@login_required
+def batch_job_list(request):
+    """
+    List all batch upload jobs
+    Doctors see all jobs, patients see their own
+    """
+    if request.user.profile.is_doctor():
+        batch_jobs = BatchUploadJob.objects.all().select_related(
+            'created_by', 'patient__user'
+        ).order_by('-created_at')
+    elif request.user.profile.is_patient():
+        # Patients see jobs for their X-rays
+        batch_jobs = BatchUploadJob.objects.filter(
+            patient__user=request.user
+        ).select_related('created_by', 'patient__user').order_by('-created_at')
+    else:
+        messages.error(request, "Access denied")
+        return redirect("home")
+
+    # Apply filters
+    status_filter = request.GET.get('status')
+    if status_filter:
+        batch_jobs = batch_jobs.filter(status=status_filter)
+
+    context = {
+        'batch_jobs': batch_jobs,
+        'status_filter': status_filter
+    }
+
+    return render(request, "detection/batch_job_list.html", context)
+
+
+@login_required
+def batch_job_detail(request, job_id):
+    """
+    View details of a specific batch upload job with progress tracking
+    """
+    batch_job = get_object_or_404(
+        BatchUploadJob.objects.select_related('created_by', 'patient__user'),
+        job_id=job_id
+    )
+
+    # Check permissions
+    if request.user.profile.is_patient():
+        if batch_job.patient.user != request.user:
+            messages.error(request, "Access denied")
+            return redirect("home")
+
+    # Get all images in this batch
+    batch_images = batch_job.images.all().select_related(
+        'xray_image__patient'
+    ).order_by('order')
+
+    # Calculate statistics
+    stats = {
+        'total': batch_job.total_images,
+        'processed': batch_job.images_processed,
+        'successful': batch_job.images_successful,
+        'failed': batch_job.images_failed,
+        'pending': batch_job.total_images - batch_job.images_processed,
+        'progress_percentage': batch_job.get_progress_percentage()
+    }
+
+    context = {
+        'batch_job': batch_job,
+        'batch_images': batch_images,
+        'stats': stats
+    }
+
+    return render(request, "detection/batch_job_detail.html", context)
+
+
+@login_required
+def batch_job_progress(request, job_id):
+    """
+    API endpoint to get batch job progress (for AJAX polling)
+    Returns JSON with current progress
+    """
+    batch_job = get_object_or_404(BatchUploadJob, job_id=job_id)
+
+    # Check permissions
+    if request.user.profile.is_patient():
+        if batch_job.patient.user != request.user:
+            return JsonResponse({"error": "Access denied"}, status=403)
+
+    # Get Celery task status if task is running
+    task_status = None
+    if batch_job.celery_task_id:
+        from celery.result import AsyncResult
+        result = AsyncResult(batch_job.celery_task_id)
+        task_status = {
+            'state': result.state,
+            'info': result.info if result.info else {}
+        }
+
+    data = {
+        'job_id': str(batch_job.job_id),
+        'status': batch_job.status,
+        'total_images': batch_job.total_images,
+        'images_processed': batch_job.images_processed,
+        'images_successful': batch_job.images_successful,
+        'images_failed': batch_job.images_failed,
+        'progress_percentage': batch_job.get_progress_percentage(),
+        'created_at': batch_job.created_at.isoformat(),
+        'started_at': batch_job.started_at.isoformat() if batch_job.started_at else None,
+        'completed_at': batch_job.completed_at.isoformat() if batch_job.completed_at else None,
+        'error_message': batch_job.error_message,
+        'task_status': task_status
+    }
+
+    return JsonResponse(data)
+
+
+@login_required
+@require_POST
+def batch_job_retry(request, job_id):
+    """
+    Retry failed images in a batch job
+    """
+    if not request.user.profile.is_doctor():
+        messages.error(request, "Access denied. Doctors only.")
+        return redirect("home")
+
+    batch_job = get_object_or_404(BatchUploadJob, job_id=job_id)
+
+    # Check if there are failed images
+    failed_count = batch_job.images.filter(status='failed').count()
+
+    if failed_count == 0:
+        messages.info(request, "No failed images to retry.")
+        return redirect("detection:batch_job_detail", job_id=job_id)
+
+    try:
+        # Queue retry task
+        from .tasks import retry_failed_batch_images
+        task = retry_failed_batch_images.delay(batch_job.id)
+
+        messages.success(
+            request,
+            f"Retrying {failed_count} failed images..."
+        )
+
+    except Exception as e:
+        logger.error(f"Error retrying batch job: {e}", exc_info=True)
+        messages.error(request, f"Error retrying: {str(e)}")
+
+    return redirect("detection:batch_job_detail", job_id=job_id)
+
+
+@login_required
+def batch_job_cancel(request, job_id):
+    """
+    Cancel a pending or processing batch job
+    """
+    if not request.user.profile.is_doctor():
+        messages.error(request, "Access denied. Doctors only.")
+        return redirect("home")
+
+    batch_job = get_object_or_404(BatchUploadJob, job_id=job_id)
+
+    if batch_job.status in ['completed', 'failed']:
+        messages.info(request, "Cannot cancel completed or failed jobs.")
+        return redirect("detection:batch_job_detail", job_id=job_id)
+
+    try:
+        # Revoke Celery task if it exists
+        if batch_job.celery_task_id:
+            from celery import current_app
+            current_app.control.revoke(batch_job.celery_task_id, terminate=True)
+
+        # Mark as failed with cancellation message
+        batch_job.mark_as_failed(error_message="Job cancelled by user")
+
+        messages.success(request, "Batch job cancelled successfully.")
+
+    except Exception as e:
+        logger.error(f"Error cancelling batch job: {e}", exc_info=True)
+        messages.error(request, f"Error cancelling job: {str(e)}")
+
+    return redirect("detection:batch_job_detail", job_id=job_id)
 
 
 # ============================================================================

@@ -1,0 +1,262 @@
+{% extends 'base.html' %}
+
+{% block title %}Batch Job Detail - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-clipboard-data"></i> Batch Job Details</h2>
+            <a href="{% url 'detection:batch_job_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+        </div>
+
+        <!-- Job Overview Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Job Information</h5>
+                    {% if batch_job.status == 'pending' %}
+                        <span class="badge bg-light text-dark">Pending</span>
+                    {% elif batch_job.status == 'processing' %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-hourglass-split"></i> Processing
+                        </span>
+                    {% elif batch_job.status == 'completed' %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle"></i> Completed
+                        </span>
+                    {% elif batch_job.status == 'failed' %}
+                        <span class="badge bg-danger">
+                            <i class="bi bi-x-circle"></i> Failed
+                        </span>
+                    {% elif batch_job.status == 'partial' %}
+                        <span class="badge bg-warning">
+                            <i class="bi bi-exclamation-triangle"></i> Partial
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Job ID:</strong> <code>{{ batch_job.job_id }}</code></p>
+                        <p><strong>Patient:</strong> {{ batch_job.patient.user.get_full_name|default:batch_job.patient.user.username }}</p>
+                        <p><strong>Created By:</strong> {{ batch_job.created_by.get_full_name|default:batch_job.created_by.username }}</p>
+                        <p><strong>CLAHE Preprocessing:</strong>
+                            {% if batch_job.apply_clahe %}
+                                <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Created:</strong> {{ batch_job.created_at|date:"Y-m-d H:i:s" }}</p>
+                        {% if batch_job.started_at %}
+                        <p><strong>Started:</strong> {{ batch_job.started_at|date:"Y-m-d H:i:s" }}</p>
+                        {% endif %}
+                        {% if batch_job.completed_at %}
+                        <p><strong>Completed:</strong> {{ batch_job.completed_at|date:"Y-m-d H:i:s" }}</p>
+                        {% endif %}
+                        {% if batch_job.notes %}
+                        <p><strong>Notes:</strong> {{ batch_job.notes }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if batch_job.error_message %}
+                <div class="alert alert-danger mt-3">
+                    <strong>Error:</strong> {{ batch_job.error_message }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Progress Card -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-graph-up"></i> Processing Progress</h5>
+            </div>
+            <div class="card-body">
+                <div class="progress mb-3" style="height: 30px;">
+                    <div id="progressBar" class="progress-bar {% if batch_job.status == 'completed' %}bg-success{% elif batch_job.status == 'failed' %}bg-danger{% endif %}"
+                         role="progressbar"
+                         style="width: {{ stats.progress_percentage }}%"
+                         aria-valuenow="{{ stats.progress_percentage }}"
+                         aria-valuemin="0"
+                         aria-valuemax="100">
+                        <span id="progressText">{{ stats.progress_percentage }}%</span>
+                    </div>
+                </div>
+
+                <div class="row text-center">
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="text-primary" id="totalCount">{{ stats.total }}</h3>
+                                <p class="text-muted mb-0">Total Images</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="text-info" id="processedCount">{{ stats.processed }}</h3>
+                                <p class="text-muted mb-0">Processed</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="text-success" id="successCount">{{ stats.successful }}</h3>
+                                <p class="text-muted mb-0">Successful</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card">
+                            <div class="card-body">
+                                <h3 class="text-danger" id="failedCount">{{ stats.failed }}</h3>
+                                <p class="text-muted mb-0">Failed</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4 text-center">
+                    {% if batch_job.status == 'processing' or batch_job.status == 'pending' %}
+                    <form method="post" action="{% url 'detection:batch_job_cancel' batch_job.job_id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-danger" onclick="return confirm('Cancel this batch job?')">
+                            <i class="bi bi-x-circle"></i> Cancel Job
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if batch_job.status == 'partial' or batch_job.status == 'failed' %}
+                    <form method="post" action="{% url 'detection:batch_job_retry' batch_job.job_id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning" onclick="return confirm('Retry failed images?')">
+                            <i class="bi bi-arrow-clockwise"></i> Retry Failed Images
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    <button id="refreshBtn" class="btn btn-outline-primary" onclick="refreshProgress()">
+                        <i class="bi bi-arrow-clockwise"></i> Refresh
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Images Table -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-images"></i> Images in Batch</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Filename</th>
+                                <th>Status</th>
+                                <th>Processing Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for image in batch_images %}
+                            <tr>
+                                <td>{{ image.order|add:1 }}</td>
+                                <td>
+                                    <code class="small">{{ image.original_filename|truncatechars:40 }}</code>
+                                </td>
+                                <td>
+                                    {% if image.status == 'pending' %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                    {% elif image.status == 'processing' %}
+                                        <span class="badge bg-primary">Processing</span>
+                                    {% elif image.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif image.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if image.processing_time %}
+                                        {{ image.processing_time|floatformat:2 }}s
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if image.xray_image %}
+                                    <a href="{% url 'detection:view_results' image.xray_image.predictions.first.id %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View Result
+                                    </a>
+                                    {% elif image.status == 'failed' %}
+                                    <small class="text-danger">{{ image.error_message|truncatechars:50 }}</small>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted">No images in this batch</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Auto-refresh progress every 5 seconds if job is processing
+{% if batch_job.status == 'processing' or batch_job.status == 'pending' %}
+let autoRefreshInterval = setInterval(refreshProgress, 5000);
+
+// Stop auto-refresh when page is hidden
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        clearInterval(autoRefreshInterval);
+    } else {
+        autoRefreshInterval = setInterval(refreshProgress, 5000);
+    }
+});
+{% endif %}
+
+function refreshProgress() {
+    fetch('{% url "detection:batch_job_progress" batch_job.job_id %}')
+        .then(response => response.json())
+        .then(data => {
+            // Update progress bar
+            document.getElementById('progressBar').style.width = data.progress_percentage + '%';
+            document.getElementById('progressBar').setAttribute('aria-valuenow', data.progress_percentage);
+            document.getElementById('progressText').textContent = data.progress_percentage + '%';
+
+            // Update counts
+            document.getElementById('processedCount').textContent = data.images_processed;
+            document.getElementById('successCount').textContent = data.images_successful;
+            document.getElementById('failedCount').textContent = data.images_failed;
+
+            // Reload page if status changed to completed/failed
+            if (data.status === 'completed' || data.status === 'failed') {
+                clearInterval(autoRefreshInterval);
+                location.reload();
+            }
+        })
+        .catch(error => {
+            console.error('Error refreshing progress:', error);
+        });
+}
+</script>
+{% endblock %}

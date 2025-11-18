@@ -30,6 +30,13 @@ urlpatterns = [
     ),
     # Patient profile
     path("patient/profile/", views.patient_profile, name="patient_profile"),
+    # Batch upload
+    path("batch/upload/", views.batch_upload, name="batch_upload"),
+    path("batch/jobs/", views.batch_job_list, name="batch_job_list"),
+    path("batch/jobs/<uuid:job_id>/", views.batch_job_detail, name="batch_job_detail"),
+    path("batch/jobs/<uuid:job_id>/progress/", views.batch_job_progress, name="batch_job_progress"),
+    path("batch/jobs/<uuid:job_id>/retry/", views.batch_job_retry, name="batch_job_retry"),
+    path("batch/jobs/<uuid:job_id>/cancel/", views.batch_job_cancel, name="batch_job_cancel"),
     # API endpoints
     path("api/models/", views.api_model_info, name="api_model_info"),
 ]

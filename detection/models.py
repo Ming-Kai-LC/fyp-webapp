@@ -400,3 +400,12 @@ def save_user_profile(sender, instance, **kwargs):
     """Save UserProfile whenever User is saved"""
     if hasattr(instance, "profile"):
         instance.profile.save()
+
+
+# Import batch processing models
+from .models_batch import BatchUploadJob, BatchUploadImage
+
+__all__ = [
+    'UserProfile', 'Patient', 'XRayImage', 'Prediction',
+    'BatchUploadJob', 'BatchUploadImage'
+]

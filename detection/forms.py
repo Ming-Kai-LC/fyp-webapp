@@ -127,5 +127,52 @@ class DoctorNotesForm(forms.Form):
     )
 
 
+class BatchXRayUploadForm(forms.Form):
+    """Form for batch uploading multiple X-ray images"""
+
+    images = forms.FileField(
+        widget=forms.FileInput(attrs={
+            'accept': 'image/*',
+            'class': 'form-control'
+        }),
+        label='X-ray Images',
+        help_text='Select multiple X-ray images (JPG, PNG). Max 50 images per batch.',
+        required=True
+    )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Add multiple attribute to the widget after initialization
+        self.fields['images'].widget.attrs['multiple'] = True
+
+    patient = forms.ModelChoiceField(
+        queryset=Patient.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        label='Patient',
+        required=True,
+        help_text='Select the patient for these X-rays'
+    )
+
+    apply_clahe = forms.BooleanField(
+        initial=True,
+        required=False,
+        label='Apply CLAHE Preprocessing',
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        help_text='Enhance image contrast using CLAHE algorithm'
+    )
+
+    notes = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
+        label='Batch Notes',
+        required=False,
+        help_text='Optional notes for this batch upload'
+    )
+
+    def clean_images(self):
+        """Validate that images are provided"""
+        # Note: Multiple file validation will be done in the view
+        return self.cleaned_data.get('images')
+
+
 # Alias for backward compatibility
 PatientForm = PatientProfileForm

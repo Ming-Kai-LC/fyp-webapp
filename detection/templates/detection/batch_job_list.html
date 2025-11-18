@@ -1,0 +1,124 @@
+{% extends 'base.html' %}
+
+{% block title %}Batch Upload Jobs - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-list-task"></i> Batch Upload Jobs</h2>
+            <a href="{% url 'detection:batch_upload' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> New Batch Upload
+            </a>
+        </div>
+
+        <!-- Filter Section -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label for="statusFilter" class="form-label">Filter by Status</label>
+                        <select name="status" id="statusFilter" class="form-select" onchange="this.form.submit()">
+                            <option value="">All Statuses</option>
+                            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>Pending</option>
+                            <option value="processing" {% if status_filter == 'processing' %}selected{% endif %}>Processing</option>
+                            <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                            <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                            <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Partial</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-end">
+                        <a href="{% url 'detection:batch_job_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-circle"></i> Clear Filters
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Jobs Table -->
+        <div class="card">
+            <div class="card-body">
+                {% if batch_jobs %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Patient</th>
+                                <th>Status</th>
+                                <th>Progress</th>
+                                <th>Images</th>
+                                <th>Created</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for job in batch_jobs %}
+                            <tr>
+                                <td>
+                                    <code class="small">{{ job.job_id|truncatechars:12 }}</code>
+                                </td>
+                                <td>
+                                    <strong>{{ job.patient.user.get_full_name|default:job.patient.user.username }}</strong>
+                                </td>
+                                <td>
+                                    {% if job.status == 'pending' %}
+                                        <span class="badge bg-secondary">Pending</span>
+                                    {% elif job.status == 'processing' %}
+                                        <span class="badge bg-primary">Processing</span>
+                                    {% elif job.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% elif job.status == 'failed' %}
+                                        <span class="badge bg-danger">Failed</span>
+                                    {% elif job.status == 'partial' %}
+                                        <span class="badge bg-warning">Partial</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar {% if job.status == 'completed' %}bg-success{% elif job.status == 'failed' %}bg-danger{% endif %}"
+                                             role="progressbar"
+                                             style="width: {{ job.get_progress_percentage }}%"
+                                             aria-valuenow="{{ job.get_progress_percentage }}"
+                                             aria-valuemin="0"
+                                             aria-valuemax="100">
+                                            {{ job.get_progress_percentage }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <small>
+                                        Total: {{ job.total_images }}<br>
+                                        Success: <span class="text-success">{{ job.images_successful }}</span><br>
+                                        Failed: <span class="text-danger">{{ job.images_failed }}</span>
+                                    </small>
+                                </td>
+                                <td>
+                                    <small>{{ job.created_at|date:"Y-m-d H:i" }}</small>
+                                </td>
+                                <td>
+                                    <a href="{% url 'detection:batch_job_detail' job.job_id %}"
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="bi bi-inbox" style="font-size: 3rem; color: #ccc;"></i>
+                    <p class="text-muted mt-3">No batch jobs found.</p>
+                    <a href="{% url 'detection:batch_upload' %}" class="btn btn-primary">
+                        <i class="bi bi-plus-circle"></i> Create Your First Batch Upload
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
