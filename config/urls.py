@@ -23,6 +23,8 @@ urlpatterns = [
     path("detection/", include("detection.urls")),
     # Medical records URLs
     path("medical-records/", include("medical_records.urls")),
+    # Reporting URLs
+    path("reporting/", include("reporting.urls")),
 ]
 
 # Serve media files in development

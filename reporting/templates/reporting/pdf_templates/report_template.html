@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COVID-19 Detection Report - {{ patient.user.get_full_name }}</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 2cm;
+        }
+
+        body {
+            font-family: 'Arial', 'Helvetica', sans-serif;
+            line-height: 1.6;
+            color: #333;
+            font-size: 11pt;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #0066cc;
+            padding-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #0066cc;
+            margin: 0;
+            font-size: 24pt;
+        }
+
+        .header .subtitle {
+            color: #666;
+            font-size: 12pt;
+            margin-top: 5px;
+        }
+
+        .logo {
+            max-width: 150px;
+            margin-bottom: 10px;
+        }
+
+        .report-info {
+            background-color: #f5f5f5;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+
+        .report-info table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .report-info td {
+            padding: 5px 10px;
+        }
+
+        .report-info strong {
+            color: #0066cc;
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section-title {
+            background-color: #0066cc;
+            color: white;
+            padding: 10px 15px;
+            margin-bottom: 15px;
+            font-size: 14pt;
+            font-weight: bold;
+        }
+
+        .diagnosis-box {
+            border: 2px solid #dc3545;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #fff5f5;
+        }
+
+        .diagnosis-box.normal {
+            border-color: #28a745;
+            background-color: #f0fff4;
+        }
+
+        .diagnosis-box h2 {
+            margin: 0;
+            font-size: 20pt;
+            color: #dc3545;
+        }
+
+        .diagnosis-box.normal h2 {
+            color: #28a745;
+        }
+
+        .diagnosis-box .confidence {
+            font-size: 16pt;
+            margin-top: 10px;
+            color: #666;
+        }
+
+        table.results {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        table.results th,
+        table.results td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+
+        table.results th {
+            background-color: #0066cc;
+            color: white;
+            font-weight: bold;
+        }
+
+        table.results tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 9pt;
+            font-weight: bold;
+        }
+
+        .badge-covid {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .badge-normal {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .badge-pneumonia {
+            background-color: #ffc107;
+            color: #000;
+        }
+
+        .notes-section {
+            background-color: #fffdf0;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .signature-section {
+            margin-top: 40px;
+            text-align: right;
+        }
+
+        .signature-line {
+            border-top: 2px solid #333;
+            width: 250px;
+            margin: 40px 0 10px auto;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin-top: 30px;
+            page-break-inside: avoid;
+        }
+
+        .qr-code img {
+            max-width: 150px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 9pt;
+            color: #666;
+            border-top: 1px solid #ddd;
+            padding-top: 10px;
+        }
+
+        @media print {
+            .page-break {
+                page-break-after: always;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        {% if report.include_hospital_logo %}
+        <img src="{{ hospital_logo }}" alt="Hospital Logo" class="logo">
+        {% endif %}
+        <h1>COVID-19 Detection Report</h1>
+        <div class="subtitle">AI-Powered Chest X-Ray Analysis</div>
+    </div>
+
+    <!-- Report Information -->
+    <div class="report-info">
+        <table>
+            <tr>
+                <td><strong>Report ID:</strong></td>
+                <td>{{ report.report_id }}</td>
+                <td><strong>Generated:</strong></td>
+                <td>{{ generated_at|date:"F d, Y - H:i" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Generated By:</strong></td>
+                <td>{{ report.generated_by.get_full_name }}</td>
+                <td><strong>Version:</strong></td>
+                <td>{{ report.version }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Patient Information -->
+    <div class="section">
+        <div class="section-title">Patient Information</div>
+        <table class="results">
+            <tr>
+                <th style="width: 30%;">Field</th>
+                <th>Details</th>
+            </tr>
+            <tr>
+                <td><strong>Full Name</strong></td>
+                <td>{{ patient.user.get_full_name }}</td>
+            </tr>
+            <tr>
+                <td><strong>Age</strong></td>
+                <td>{{ patient.age }} years</td>
+            </tr>
+            <tr>
+                <td><strong>Gender</strong></td>
+                <td>{{ patient.get_gender_display }}</td>
+            </tr>
+            <tr>
+                <td><strong>Contact</strong></td>
+                <td>{{ patient.phone_number|default:"N/A" }}</td>
+            </tr>
+            <tr>
+                <td><strong>Email</strong></td>
+                <td>{{ patient.user.email }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Diagnosis Results -->
+    <div class="section">
+        <div class="section-title">Diagnosis Results</div>
+
+        <div class="diagnosis-box {% if prediction.final_diagnosis == 'Normal' %}normal{% endif %}">
+            <h2>Final Diagnosis: {{ prediction.final_diagnosis }}</h2>
+            <div class="confidence">Confidence Level: {{ prediction.consensus_confidence|floatformat:2 }}%</div>
+            <div style="margin-top: 10px; font-size: 11pt;">
+                Best Performing Model: <strong>{{ best_model }}</strong>
+            </div>
+        </div>
+
+        <p><strong>X-Ray Upload Date:</strong> {{ xray.upload_date|date:"F d, Y - H:i" }}</p>
+        <p><strong>Analysis Completed:</strong> {{ prediction.created_at|date:"F d, Y - H:i" }}</p>
+        <p><strong>Inference Time:</strong> {{ prediction.inference_time|floatformat:2 }} milliseconds</p>
+    </div>
+
+    <!-- Model Predictions -->
+    <div class="section">
+        <div class="section-title">Detailed Model Predictions</div>
+        <table class="results">
+            <thead>
+                <tr>
+                    <th>Model</th>
+                    <th>Prediction</th>
+                    <th>Confidence</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>CrossViT</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.crossvit_prediction == 'COVID-19' %}badge-covid{% elif prediction.crossvit_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.crossvit_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.crossvit_confidence|floatformat:2 }}%</td>
+                </tr>
+                <tr>
+                    <td><strong>ResNet-50</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.resnet50_prediction == 'COVID-19' %}badge-covid{% elif prediction.resnet50_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.resnet50_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.resnet50_confidence|floatformat:2 }}%</td>
+                </tr>
+                <tr>
+                    <td><strong>DenseNet-121</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.densenet121_prediction == 'COVID-19' %}badge-covid{% elif prediction.densenet121_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.densenet121_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.densenet121_confidence|floatformat:2 }}%</td>
+                </tr>
+                <tr>
+                    <td><strong>EfficientNet</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.efficientnet_prediction == 'COVID-19' %}badge-covid{% elif prediction.efficientnet_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.efficientnet_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.efficientnet_confidence|floatformat:2 }}%</td>
+                </tr>
+                <tr>
+                    <td><strong>ViT (Vision Transformer)</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.vit_prediction == 'COVID-19' %}badge-covid{% elif prediction.vit_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.vit_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.vit_confidence|floatformat:2 }}%</td>
+                </tr>
+                <tr>
+                    <td><strong>Swin Transformer</strong></td>
+                    <td>
+                        <span class="badge {% if prediction.swin_prediction == 'COVID-19' %}badge-covid{% elif prediction.swin_prediction == 'Normal' %}badge-normal{% else %}badge-pneumonia{% endif %}">
+                            {{ prediction.swin_prediction }}
+                        </span>
+                    </td>
+                    <td>{{ prediction.swin_confidence|floatformat:2 }}%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Additional Notes -->
+    {% if report.custom_notes or prediction.doctor_notes %}
+    <div class="section">
+        <div class="section-title">Clinical Notes & Recommendations</div>
+        <div class="notes-section">
+            {% if report.custom_notes %}
+            <p><strong>Report Notes:</strong></p>
+            <p>{{ report.custom_notes }}</p>
+            {% endif %}
+            {% if prediction.doctor_notes %}
+            <p><strong>Doctor's Notes:</strong></p>
+            <p>{{ prediction.doctor_notes }}</p>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Disclaimer -->
+    <div class="section">
+        <div class="section-title">Important Disclaimer</div>
+        <p style="font-size: 10pt; color: #666;">
+            This report is generated by an AI-powered system for COVID-19 detection from chest X-rays.
+            While the system uses state-of-the-art deep learning models, this analysis should be used
+            as a supplementary diagnostic tool and not as a definitive diagnosis. Clinical correlation
+            and confirmation by qualified medical professionals are essential for accurate diagnosis
+            and treatment planning.
+        </p>
+    </div>
+
+    <!-- QR Code -->
+    {% if report.include_qr_code and qr_code %}
+    <div class="qr-code">
+        <p><strong>Scan to Verify Report Authenticity:</strong></p>
+        <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code for Report Verification">
+        <p style="font-size: 9pt; color: #666;">Report ID: {{ report.report_id }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Signature -->
+    {% if report.include_signature %}
+    <div class="signature-section">
+        <div class="signature-line"></div>
+        <p><strong>{{ report.generated_by.get_full_name }}</strong></p>
+        <p style="font-size: 10pt; color: #666;">
+            {{ report.generated_by.profile.get_role_display|default:"Medical Professional" }}
+        </p>
+        <p style="font-size: 9pt; color: #999;">
+            Date: {{ generated_at|date:"F d, Y" }}
+        </p>
+    </div>
+    {% endif %}
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>
+            This is a computer-generated report. No signature is required for validity. |
+            Report ID: {{ report.report_id }} |
+            Generated: {{ generated_at|date:"Y-m-d H:i" }}
+        </p>
+    </div>
+</body>
+</html>
