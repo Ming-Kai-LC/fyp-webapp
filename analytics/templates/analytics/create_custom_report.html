@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Custom Report - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="bi bi-plus-circle"></i> Create Custom Report
+            </h1>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="name" class="form-label">Report Name</label>
+                            <input type="text" name="name" id="name" class="form-control" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="report_type" class="form-label">Report Type</label>
+                            <select name="report_type" id="report_type" class="form-select" required>
+                                <option value="prediction_trends">Prediction Trends</option>
+                                <option value="demographic_analysis">Demographic Analysis</option>
+                                <option value="model_comparison">Model Comparison</option>
+                                <option value="doctor_productivity">Doctor Productivity</option>
+                                <option value="patient_outcomes">Patient Outcomes</option>
+                                <option value="custom">Custom Query</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="chart_type" class="form-label">Chart Type</label>
+                            <select name="chart_type" id="chart_type" class="form-select" required>
+                                <option value="line">Line Chart</option>
+                                <option value="bar">Bar Chart</option>
+                                <option value="pie">Pie Chart</option>
+                                <option value="heatmap">Heatmap</option>
+                                <option value="table">Table</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="description" class="form-label">Description</label>
+                            <textarea name="description" id="description" class="form-control" rows="3"></textarea>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" name="start_date" id="start_date" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" name="end_date" id="end_date" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_public" id="is_public" class="form-check-input">
+                            <label for="is_public" class="form-check-label">
+                                Make this report public
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle"></i> Create Report
+                            </button>
+                            <a href="{% url 'analytics:custom_reports' %}" class="btn btn-secondary">
+                                Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

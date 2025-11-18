@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+
+{% block title %}Export Data - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="bi bi-download"></i> Export Analytics Data
+            </h1>
+            <p class="text-muted">Export data for research and external analysis</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Configure Export</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="export_type" class="form-label">Export Type</label>
+                            <select name="export_type" id="export_type" class="form-select" required>
+                                <option value="predictions">Predictions Data</option>
+                                <option value="demographics">Demographics</option>
+                                <option value="full_dataset">Full Dataset</option>
+                                <option value="custom">Custom Query</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="file_format" class="form-label">File Format</label>
+                            <select name="file_format" id="file_format" class="form-select" required>
+                                <option value="csv">CSV</option>
+                                <option value="xlsx">Excel (XLSX)</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start Date</label>
+                                <input type="date" name="start_date" id="start_date" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="end_date" class="form-label">End Date</label>
+                                <input type="date" name="end_date" id="end_date" class="form-control">
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="diagnosis" class="form-label">Filter by Diagnosis (Optional)</label>
+                            <select name="diagnosis" id="diagnosis" class="form-select">
+                                <option value="">All Diagnoses</option>
+                                <option value="COVID">COVID-19</option>
+                                <option value="Normal">Normal</option>
+                                <option value="Viral Pneumonia">Viral Pneumonia</option>
+                                <option value="Lung Opacity">Lung Opacity</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="anonymized" id="anonymized" class="form-check-input">
+                            <label for="anonymized" class="form-check-label">
+                                Anonymize patient data (recommended for research)
+                            </label>
+                        </div>
+
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle"></i>
+                            <strong>Note:</strong> Exported data should be handled according to data protection regulations and institutional policies.
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-download"></i> Export Data
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <a href="{% url 'analytics:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

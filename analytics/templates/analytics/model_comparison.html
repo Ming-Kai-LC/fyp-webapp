@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Model Comparison - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="bi bi-robot"></i> AI Model Comparison
+            </h1>
+            <p class="text-muted">Compare performance of all 6 AI models</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Average Confidence by Model</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="confidenceChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Model Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Model</th>
+                                    <th>Avg Confidence</th>
+                                    <th>Total Predictions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>CrossViT</strong></td>
+                                    <td>{{ comparison_data.crossvit.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.crossvit.total_predictions }}</td>
+                                </tr>
+                                <tr>
+                                    <td>ResNet-50</td>
+                                    <td>{{ comparison_data.resnet50.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.resnet50.total_predictions }}</td>
+                                </tr>
+                                <tr>
+                                    <td>DenseNet-121</td>
+                                    <td>{{ comparison_data.densenet121.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.densenet121.total_predictions }}</td>
+                                </tr>
+                                <tr>
+                                    <td>EfficientNet-B0</td>
+                                    <td>{{ comparison_data.efficientnet.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.efficientnet.total_predictions }}</td>
+                                </tr>
+                                <tr>
+                                    <td>ViT-Base</td>
+                                    <td>{{ comparison_data.vit.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.vit.total_predictions }}</td>
+                                </tr>
+                                <tr>
+                                    <td>Swin-Tiny</td>
+                                    <td>{{ comparison_data.swin.avg_confidence }}%</td>
+                                    <td>{{ comparison_data.swin.total_predictions }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="{% url 'analytics:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const comparisonData = {{ comparison_json|safe }};
+
+    const ctx = document.getElementById('confidenceChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['CrossViT', 'ResNet-50', 'DenseNet-121', 'EfficientNet-B0', 'ViT-Base', 'Swin-Tiny'],
+            datasets: [{
+                label: 'Average Confidence (%)',
+                data: [
+                    comparisonData.crossvit.avg_confidence,
+                    comparisonData.resnet50.avg_confidence,
+                    comparisonData.densenet121.avg_confidence,
+                    comparisonData.efficientnet.avg_confidence,
+                    comparisonData.vit.avg_confidence,
+                    comparisonData.swin.avg_confidence
+                ],
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(13, 110, 253, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(13, 202, 240, 0.7)',
+                    'rgba(111, 66, 193, 0.7)'
+                ],
+                borderColor: [
+                    '#dc3545',
+                    '#0d6efd',
+                    '#198754',
+                    '#ffc107',
+                    '#0dcaf0',
+                    '#6f42c1'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    title: {
+                        display: true,
+                        text: 'Confidence (%)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

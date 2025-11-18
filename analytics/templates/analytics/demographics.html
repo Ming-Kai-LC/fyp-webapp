@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}Demographics - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="bi bi-people"></i> Demographic Analysis
+            </h1>
+            <p class="text-muted">Patient demographics and diagnosis distribution</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Predictions by Age Group</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ageChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Diagnosis Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="diagnosisChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="{% url 'analytics:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const demographics = {{ demographics_json|safe }};
+
+    // Age Group Chart
+    const ageCtx = document.getElementById('ageChart').getContext('2d');
+    new Chart(ageCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(demographics.by_age_group),
+            datasets: [{
+                label: 'Number of Predictions',
+                data: Object.values(demographics.by_age_group),
+                backgroundColor: 'rgba(13, 110, 253, 0.7)',
+                borderColor: '#0d6efd',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Diagnosis Chart
+    const diagnosisCtx = document.getElementById('diagnosisChart').getContext('2d');
+    new Chart(diagnosisCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(demographics.by_diagnosis),
+            datasets: [{
+                data: Object.values(demographics.by_diagnosis),
+                backgroundColor: [
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(25, 135, 84, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(13, 202, 240, 0.7)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

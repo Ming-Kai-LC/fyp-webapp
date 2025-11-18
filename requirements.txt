@@ -16,9 +16,12 @@ Pillow==10.1.0
 # opencv-python==4.8.1.78
 # scikit-learn==1.3.2
 # numpy==1.24.3
-# pandas==2.1.3
+pandas==2.1.3  # Required for analytics module
 # matplotlib==3.8.2
 # seaborn==0.13.0
+
+# Analytics Module Dependencies
+plotly==5.18.0  # For interactive charts
 
 # Reporting Module Dependencies
 weasyprint==60.1          # For HTML to PDF conversion (primary)
