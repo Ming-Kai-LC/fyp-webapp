@@ -1,0 +1,17 @@
+# Reporting Module Dependencies
+# Install with: pip install -r requirements-reporting.txt
+
+# PDF Generation (Primary)
+weasyprint==60.1
+
+# PDF Generation (Fallback)
+xhtml2pdf==0.2.13
+
+# Excel Export
+openpyxl==3.1.2
+
+# QR Code Generation
+qrcode[pil]==7.4.2
+
+# Image Processing (should already be installed)
+Pillow==10.1.0

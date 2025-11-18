@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "accounts",
     "detection",
     "dashboards",
+    "reporting",
 ]
 
 MIDDLEWARE = [
@@ -134,6 +135,9 @@ os.makedirs(MEDIA_ROOT / "xrays" / "processed", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "heatmaps", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "attention" / "large", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "attention" / "small", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "reports" / "pdf", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "reports" / "batch", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "signatures", exist_ok=True)
 
 
 # Default primary key field type
@@ -273,6 +277,11 @@ COVID_CLASSES = ["COVID", "Lung Opacity", "Normal", "Viral Pneumonia"]
 ENABLE_EXPLAINABILITY = True  # Spotlight 2
 ENABLE_MULTI_MODEL_COMPARISON = True  # Spotlight 1
 ENABLE_CLAHE_PREPROCESSING = True
+
+# Report settings
+SITE_URL = 'http://localhost:8000'  # Change in production
+REPORT_LOGO_PATH = BASE_DIR / 'static' / 'images' / 'hospital_logo.png'
+REPORT_SIGNATURE_PATH = MEDIA_ROOT / 'signatures'
 
 print(
     f"""

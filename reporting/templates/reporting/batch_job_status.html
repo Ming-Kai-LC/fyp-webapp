@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Batch Job Status - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{% url 'detection:home' %}">Home</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'reporting:report_list' %}">Reports</a></li>
+                    <li class="breadcrumb-item active">Batch Job Status</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h2><i class="fas fa-tasks"></i> Batch Job Status</h2>
+            <p class="text-muted">Job ID: {{ job.job_id }}</p>
+        </div>
+    </div>
+
+    <!-- Job Status Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle"></i> Job Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Status:</strong>
+                                <span class="badge
+                                    {% if job.status == 'completed' %}bg-success
+                                    {% elif job.status == 'processing' %}bg-warning
+                                    {% elif job.status == 'failed' %}bg-danger
+                                    {% else %}bg-secondary{% endif %}">
+                                    {{ job.get_status_display }}
+                                </span>
+                            </p>
+                            <p><strong>Created By:</strong> {{ job.created_by.get_full_name }}</p>
+                            <p><strong>Created At:</strong> {{ job.created_at|date:"Y-m-d H:i:s" }}</p>
+                            {% if job.completed_at %}
+                            <p><strong>Completed At:</strong> {{ job.completed_at|date:"Y-m-d H:i:s" }}</p>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Reports:</strong> {{ job.total_reports }}</p>
+                            <p><strong>Completed Reports:</strong> {{ job.completed_reports }}</p>
+                            <p><strong>Failed Reports:</strong> {{ job.failed_reports }}</p>
+                            <p><strong>Template:</strong> {{ job.template.name }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Progress Bar -->
+                    <div class="mt-3">
+                        <label><strong>Progress:</strong> {{ progress }}%</label>
+                        <div class="progress" style="height: 30px;">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                 role="progressbar"
+                                 style="width: {{ progress }}%;"
+                                 aria-valuenow="{{ progress }}"
+                                 aria-valuemin="0"
+                                 aria-valuemax="100">
+                                {{ progress }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if job.error_log %}
+                    <div class="mt-3">
+                        <div class="alert alert-danger">
+                            <strong>Errors:</strong>
+                            <pre>{{ job.error_log }}</pre>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-body text-center">
+                    {% if job.status == 'completed' and job.zip_file %}
+                    <a href="{% url 'reporting:download_batch_reports' job.job_id %}" class="btn btn-success btn-lg">
+                        <i class="fas fa-download"></i> Download All Reports (ZIP)
+                    </a>
+                    {% endif %}
+
+                    {% if job.status == 'processing' %}
+                    <button class="btn btn-primary btn-lg" onclick="location.reload()">
+                        <i class="fas fa-sync"></i> Refresh Status
+                    </button>
+                    {% endif %}
+
+                    <a href="{% url 'reporting:report_list' %}" class="btn btn-secondary btn-lg ms-2">
+                        <i class="fas fa-list"></i> Back to Reports List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if job.status == 'processing' %}
+<script>
+    // Auto-refresh every 5 seconds while processing
+    setTimeout(function() {
+        location.reload();
+    }, 5000);
+</script>
+{% endif %}
+{% endblock %}
