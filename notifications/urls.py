@@ -6,6 +6,7 @@ app_name = 'notifications'
 urlpatterns = [
     # Notification list
     path('', views.notification_list, name='notification_list'),
+    path('', views.notification_list, name='list'),  # Alias for backward compatibility
     path('<uuid:notification_id>/read/', views.mark_as_read, name='mark_as_read'),
     path('mark-all-read/', views.mark_all_as_read, name='mark_all_as_read'),
 

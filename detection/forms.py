@@ -125,3 +125,7 @@ class DoctorNotesForm(forms.Form):
         label="Mark as validated",
         widget=forms.CheckboxInput(attrs={"class": "form-check-input"}),
     )
+
+
+# Alias for backward compatibility
+PatientForm = PatientProfileForm

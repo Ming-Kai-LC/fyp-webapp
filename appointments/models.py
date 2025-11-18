@@ -19,6 +19,26 @@ import uuid
 from datetime import datetime, timedelta
 
 
+# Convenience reference for appointment types (for backward compatibility)
+class AppointmentType:
+    """Reference class for appointment types"""
+    CONSULTATION = 'consultation'
+    FOLLOW_UP = 'follow_up'
+    XRAY_REVIEW = 'xray_review'
+    RESULTS_DISCUSSION = 'results_discussion'
+    VIRTUAL = 'virtual'
+    EMERGENCY = 'emergency'
+
+    CHOICES = (
+        (CONSULTATION, 'General Consultation'),
+        (FOLLOW_UP, 'Follow-up'),
+        (XRAY_REVIEW, 'X-ray Review'),
+        (RESULTS_DISCUSSION, 'Results Discussion'),
+        (VIRTUAL, 'Virtual Consultation'),
+        (EMERGENCY, 'Emergency'),
+    )
+
+
 class DoctorSchedule(models.Model):
     """
     Define doctor's working hours and availability.

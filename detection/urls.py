@@ -14,6 +14,7 @@ urlpatterns = [
     path("patient/dashboard/", views.patient_dashboard, name="patient_dashboard"),
     # Upload & Prediction
     path("upload/", views.upload_xray, name="upload_xray"),
+    path("upload/", views.upload_xray, name="upload"),  # Alias for tests
     path("results/<int:prediction_id>/", views.view_results, name="view_results"),
     path(
         "explain/<int:prediction_id>/",

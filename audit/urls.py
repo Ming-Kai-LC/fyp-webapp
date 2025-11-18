@@ -6,6 +6,7 @@ app_name = 'audit'
 urlpatterns = [
     # Audit logs
     path('logs/', views.audit_log_list, name='audit_log_list'),
+    path('logs/', views.audit_log_list, name='logs'),  # Alias for backward compatibility
     path('data-access/', views.data_access_log_list, name='data_access_log_list'),
     path('login-attempts/', views.login_attempts_list, name='login_attempts_list'),
 

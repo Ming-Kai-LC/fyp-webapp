@@ -441,3 +441,14 @@ def calculate_risk_score(request, patient_id):
         'patient': patient,
         'risk_score': risk_score,
     })
+
+
+@login_required
+def medical_summary_current_user(request):
+    """Redirect to medical summary for the current logged-in user"""
+    try:
+        patient = request.user.patient_info
+        return medical_summary(request, patient.id)
+    except Patient.DoesNotExist:
+        messages.error(request, "Patient profile not found.")
+        return redirect('dashboards:patient_dashboard')

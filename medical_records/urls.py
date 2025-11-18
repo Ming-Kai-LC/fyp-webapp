@@ -32,6 +32,7 @@ urlpatterns = [
 
     # Medical summary
     path('summary/<int:patient_id>/', views.medical_summary, name='medical_summary'),
+    path('summary/', views.medical_summary_current_user, name='summary'),  # Current user's summary
 
     # Risk assessment
     path('risk-assessment/<int:patient_id>/', views.calculate_risk_score, name='calculate_risk_score'),
