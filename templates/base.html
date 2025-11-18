@@ -88,31 +88,87 @@
 
                     {% if user.is_authenticated %}
                         {% if user.profile.is_doctor %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'detection:doctor_dashboard' %}">
-                                    <i class="bi bi-speedometer2"></i> Dashboard
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="doctorMenuDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-grid"></i> Menu
                                 </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'detection:upload_xray' %}">
-                                    <i class="bi bi-cloud-upload"></i> Upload X-Ray
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'analytics:dashboard' %}">
-                                    <i class="bi bi-graph-up"></i> Analytics
-                                </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'detection:doctor_dashboard' %}">
+                                        <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboards:doctor' %}">
+                                        <i class="bi bi-columns-gap"></i> Enhanced Dashboard
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'detection:upload_xray' %}">
+                                        <i class="bi bi-cloud-upload"></i> Upload X-Ray
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'appointments:doctor_appointments' %}">
+                                        <i class="bi bi-calendar-check"></i> Appointments
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'analytics:dashboard' %}">
+                                        <i class="bi bi-graph-up"></i> Analytics
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'reporting:report_list' %}">
+                                        <i class="bi bi-file-earmark-text"></i> Reports
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'audit:audit_log_list' %}">
+                                        <i class="bi bi-shield-check"></i> Audit Logs
+                                    </a></li>
+                                </ul>
                             </li>
                         {% elif user.profile.is_patient %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'detection:patient_dashboard' %}">
-                                    <i class="bi bi-speedometer2"></i> Dashboard
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="patientMenuDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-grid"></i> Menu
                                 </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'detection:patient_dashboard' %}">
+                                        <i class="bi bi-speedometer2"></i> Dashboard
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboards:patient' %}">
+                                        <i class="bi bi-columns-gap"></i> Enhanced Dashboard
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'detection:prediction_history' %}">
+                                        <i class="bi bi-clock-history"></i> My Results
+                                    </a></li>
+                                    <li>
+                                        {% if user.patient_info %}
+                                        <a class="dropdown-item" href="{% url 'medical_records:medical_summary' user.patient_info.id %}">
+                                            <i class="bi bi-heart-pulse"></i> Medical Records
+                                        </a>
+                                        {% endif %}
+                                    </li>
+                                    <li><a class="dropdown-item" href="{% url 'appointments:my_appointments' %}">
+                                        <i class="bi bi-calendar-event"></i> My Appointments
+                                    </a></li>
+                                </ul>
                             </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'detection:prediction_history' %}">
-                                    <i class="bi bi-clock-history"></i> My Results
+                        {% elif user.profile.is_admin %}
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="adminMenuDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-grid"></i> Menu
                                 </a>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'dashboards:admin' %}">
+                                        <i class="bi bi-speedometer2"></i> Admin Dashboard
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'analytics:dashboard' %}">
+                                        <i class="bi bi-graph-up"></i> Analytics
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'audit:audit_log_list' %}">
+                                        <i class="bi bi-shield-check"></i> Audit Logs
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'audit:security_alerts_dashboard' %}">
+                                        <i class="bi bi-exclamation-triangle"></i> Security Alerts
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'audit:compliance_dashboard' %}">
+                                        <i class="bi bi-file-earmark-check"></i> Compliance
+                                    </a></li>
+                                </ul>
                             </li>
                         {% endif %}
 
