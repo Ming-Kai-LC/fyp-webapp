@@ -33,6 +33,8 @@ urlpatterns = [
     path("appointments/", include("appointments.urls")),
     # Analytics URLs
     path("analytics/", include("analytics.urls")),
+    # Enhanced Dashboards URLs
+    path("dashboards/", include("dashboards.urls")),
 ]
 
 # Serve media files in development
