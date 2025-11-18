@@ -1,0 +1,62 @@
+{% extends 'appointments/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Reschedule Appointment{% endblock %}
+{% block appointments_title %}Reschedule Appointment{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">Choose a new date and time for your appointment.</p>
+{% endblock %}
+
+{% block appointments_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="alert alert-info">
+            <h6 class="alert-heading"><i class="bi bi-info-circle"></i> Current Appointment</h6>
+            <p class="mb-1">
+                <strong>Date:</strong> {{ appointment.appointment_date|date:"F d, Y" }}<br>
+                <strong>Time:</strong> {{ appointment.appointment_time|time:"g:i A" }}<br>
+                <strong>Doctor:</strong> Dr. {{ appointment.doctor.get_full_name }}
+            </p>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar2-week"></i> New Appointment Details</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="bi bi-check-circle"></i> Reschedule Appointment
+                        </button>
+                        <a href="{% url 'appointments:appointment_detail' appointment.appointment_id %}"
+                           class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Notice</h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-0">
+                    <small>
+                        Rescheduling will cancel your current appointment and create a new one.
+                        You'll receive a new confirmation email.
+                    </small>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

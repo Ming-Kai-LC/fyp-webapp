@@ -1,0 +1,225 @@
+{% extends 'appointments/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Appointment Details{% endblock %}
+{% block appointments_title %}Appointment Details{% endblock %}
+
+{% block appointments_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar-check"></i> Appointment Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1">Appointment ID</h6>
+                        <p class="mb-0"><code>{{ appointment.appointment_id }}</code></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1">Status</h6>
+                        <p class="mb-0">
+                            {% if appointment.status == 'scheduled' %}
+                                <span class="badge bg-secondary">Scheduled</span>
+                            {% elif appointment.status == 'confirmed' %}
+                                <span class="badge bg-success">Confirmed</span>
+                            {% elif appointment.status == 'in_progress' %}
+                                <span class="badge bg-primary">In Progress</span>
+                            {% elif appointment.status == 'completed' %}
+                                <span class="badge bg-info">Completed</span>
+                            {% elif appointment.status == 'cancelled_patient' or appointment.status == 'cancelled_doctor' %}
+                                <span class="badge bg-danger">Cancelled</span>
+                            {% elif appointment.status == 'no_show' %}
+                                <span class="badge bg-warning">No Show</span>
+                            {% elif appointment.status == 'rescheduled' %}
+                                <span class="badge bg-secondary">Rescheduled</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-person"></i> Patient</h6>
+                        <p class="mb-0">{{ appointment.patient.user.get_full_name }}</p>
+                        <small class="text-muted">{{ appointment.patient.user.email }}</small>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-person-badge"></i> Doctor</h6>
+                        <p class="mb-0">Dr. {{ appointment.doctor.get_full_name }}</p>
+                        <small class="text-muted">{{ appointment.doctor.email }}</small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-calendar"></i> Date</h6>
+                        <p class="mb-0">{{ appointment.appointment_date|date:"l, F d, Y" }}</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-clock"></i> Time</h6>
+                        <p class="mb-0">{{ appointment.appointment_time|time:"g:i A" }} - {{ appointment.end_time|time:"g:i A" }}</p>
+                        <small class="text-muted">Duration: {{ appointment.duration }} minutes</small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-tag"></i> Appointment Type</h6>
+                        <p class="mb-0">
+                            <span class="badge bg-info">{{ appointment.get_appointment_type_display }}</span>
+                            {% if appointment.is_virtual %}
+                                <span class="badge bg-primary"><i class="bi bi-camera-video"></i> Virtual</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted mb-1"><i class="bi bi-calendar-plus"></i> Booked At</h6>
+                        <p class="mb-0">{{ appointment.booked_at|date:"M d, Y g:i A" }}</p>
+                        {% if appointment.booked_by %}
+                            <small class="text-muted">by {{ appointment.booked_by.get_full_name }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <hr>
+
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1"><i class="bi bi-journal-text"></i> Reason for Visit</h6>
+                    <p class="mb-0">{{ appointment.reason }}</p>
+                </div>
+
+                {% if appointment.notes %}
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1"><i class="bi bi-sticky"></i> Patient Notes</h6>
+                    <p class="mb-0">{{ appointment.notes }}</p>
+                </div>
+                {% endif %}
+
+                {% if appointment.doctor_notes and user_role == 'doctor' or appointment.status == 'completed' %}
+                <hr>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1"><i class="bi bi-file-medical"></i> Doctor's Notes</h6>
+                    <p class="mb-0">{{ appointment.doctor_notes|default:"No notes added yet." }}</p>
+                </div>
+                {% endif %}
+
+                {% if appointment.is_virtual and appointment.video_link %}
+                <hr>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1"><i class="bi bi-camera-video"></i> Virtual Consultation Link</h6>
+                    <p class="mb-0">
+                        <a href="{{ appointment.video_link }}" target="_blank" class="btn btn-primary btn-sm">
+                            <i class="bi bi-box-arrow-up-right"></i> Join Video Call
+                        </a>
+                    </p>
+                </div>
+                {% endif %}
+
+                {% if appointment.cancellation_reason %}
+                <hr>
+                <div class="mb-3">
+                    <h6 class="text-muted mb-1"><i class="bi bi-x-circle"></i> Cancellation Reason</h6>
+                    <p class="mb-0">{{ appointment.cancellation_reason }}</p>
+                    {% if appointment.cancelled_at %}
+                        <small class="text-muted">Cancelled on {{ appointment.cancelled_at|date:"M d, Y g:i A" }}</small>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card mb-3">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-gear"></i> Actions</h6>
+            </div>
+            <div class="card-body">
+                {% if appointment.status not in 'completed,cancelled_patient,cancelled_doctor,no_show,rescheduled' %}
+                    {% if user_role == 'doctor' %}
+                        <form method="post" action="{% url 'appointments:complete_appointment' appointment.appointment_id %}" class="mb-2">
+                            {% csrf_token %}
+                            <div class="mb-2">
+                                <textarea name="doctor_notes" class="form-control" rows="3" placeholder="Enter appointment notes..." required></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success w-100 mb-2">
+                                <i class="bi bi-check-circle"></i> Mark as Completed
+                            </button>
+                        </form>
+                    {% endif %}
+
+                    <a href="{% url 'appointments:reschedule_appointment' appointment.appointment_id %}"
+                       class="btn btn-warning w-100 mb-2">
+                        <i class="bi bi-calendar2-week"></i> Reschedule
+                    </a>
+
+                    <button type="button" class="btn btn-danger w-100" data-bs-toggle="modal" data-bs-target="#cancelModal">
+                        <i class="bi bi-x-circle"></i> Cancel Appointment
+                    </button>
+                {% endif %}
+
+                <a href="{% url 'appointments:my_appointments' %}" class="btn btn-outline-secondary w-100 mt-2">
+                    <i class="bi bi-arrow-left"></i> Back to Appointments
+                </a>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0"><i class="bi bi-bell"></i> Reminders</h6>
+            </div>
+            <div class="card-body">
+                {% if appointment.confirmation_sent %}
+                    <p class="mb-2">
+                        <i class="bi bi-check-circle-fill text-success"></i> Confirmation sent
+                    </p>
+                {% endif %}
+                {% if appointment.reminder_sent %}
+                    <p class="mb-0">
+                        <i class="bi bi-check-circle-fill text-success"></i> Reminder sent
+                        <br><small class="text-muted">{{ appointment.reminder_sent_at|date:"M d, Y g:i A" }}</small>
+                    </p>
+                {% else %}
+                    <p class="mb-0">
+                        <i class="bi bi-clock text-warning"></i> Reminder pending
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Cancel Appointment Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="cancelModalLabel">Cancel Appointment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'appointments:cancel_appointment' appointment.appointment_id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p>Are you sure you want to cancel this appointment?</p>
+                    <div class="mb-3">
+                        <label for="cancellation_reason" class="form-label">Reason for Cancellation</label>
+                        <textarea name="cancellation_reason" id="cancellation_reason" class="form-control" rows="3" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-danger">Confirm Cancellation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

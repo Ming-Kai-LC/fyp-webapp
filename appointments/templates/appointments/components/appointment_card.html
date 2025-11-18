@@ -1,0 +1,72 @@
+{% comment %}
+Appointment Card Component
+
+Displays an appointment in a card format with key information.
+
+Usage:
+    {% include 'appointments/components/appointment_card.html' with appointment=appointment %}
+
+Parameters:
+    - appointment: Appointment object
+{% endcomment %}
+
+<div class="card appointment-card mb-3">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-2">
+                <div class="text-center">
+                    <div class="h3 mb-0">{{ appointment.appointment_date|date:"d" }}</div>
+                    <div class="text-muted">{{ appointment.appointment_date|date:"M Y" }}</div>
+                    <div class="mt-2">
+                        <i class="bi bi-clock"></i> {{ appointment.appointment_time|time:"g:i A" }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <h5 class="card-title mb-1">
+                    {% if user.profile.role == 'doctor' %}
+                        <i class="bi bi-person"></i> {{ appointment.patient.user.get_full_name }}
+                    {% else %}
+                        <i class="bi bi-person-badge"></i> Dr. {{ appointment.doctor.get_full_name }}
+                    {% endif %}
+                </h5>
+                <p class="mb-1">
+                    <span class="badge bg-info appointment-type-badge">
+                        {{ appointment.get_appointment_type_display }}
+                    </span>
+                    {% if appointment.is_virtual %}
+                        <span class="badge bg-primary appointment-type-badge">
+                            <i class="bi bi-camera-video"></i> Virtual
+                        </span>
+                    {% endif %}
+                </p>
+                <p class="text-muted mb-0">
+                    <small><i class="bi bi-journal-text"></i> {{ appointment.reason|truncatewords:15 }}</small>
+                </p>
+            </div>
+            <div class="col-md-2 text-center">
+                {% if appointment.status == 'scheduled' %}
+                    <span class="badge bg-secondary status-badge">Scheduled</span>
+                {% elif appointment.status == 'confirmed' %}
+                    <span class="badge bg-success status-badge">Confirmed</span>
+                {% elif appointment.status == 'in_progress' %}
+                    <span class="badge bg-primary status-badge">In Progress</span>
+                {% elif appointment.status == 'completed' %}
+                    <span class="badge bg-info status-badge">Completed</span>
+                {% elif appointment.status == 'cancelled_patient' or appointment.status == 'cancelled_doctor' %}
+                    <span class="badge bg-danger status-badge">Cancelled</span>
+                {% elif appointment.status == 'no_show' %}
+                    <span class="badge bg-warning status-badge">No Show</span>
+                {% elif appointment.status == 'rescheduled' %}
+                    <span class="badge bg-secondary status-badge">Rescheduled</span>
+                {% endif %}
+            </div>
+            <div class="col-md-2 text-end">
+                <a href="{% url 'appointments:appointment_detail' appointment.appointment_id %}"
+                   class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-eye"></i> View
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
