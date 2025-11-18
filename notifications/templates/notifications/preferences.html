@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Notification Preferences - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-gear"></i> Notification Preferences
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    <p class="text-muted mb-4">
+                        <i class="bi bi-info-circle"></i>
+                        Manage how and when you receive notifications from the COVID-19 Detection System.
+                    </p>
+
+                    {% crispy form %}
+
+                    <hr class="my-4">
+
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Notifications
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#infoModal">
+                                <i class="bi bi-question-circle"></i> Help
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="infoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-info-circle"></i> Notification Preferences Help
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Notification Channels</h6>
+                <ul>
+                    <li><strong>Email:</strong> Receive notifications via email</li>
+                    <li><strong>SMS:</strong> Receive text messages for critical alerts</li>
+                    <li><strong>In-App:</strong> View notifications when logged into the system</li>
+                </ul>
+
+                <h6 class="mt-3">Notification Types</h6>
+                <ul>
+                    <li><strong>Prediction Results:</strong> When COVID-19 test results are ready</li>
+                    <li><strong>Appointment Reminders:</strong> Upcoming appointment alerts</li>
+                    <li><strong>Report Ready:</strong> When medical reports are generated</li>
+                    <li><strong>Doctor Notes:</strong> When doctors add notes to your records</li>
+                    <li><strong>System Updates:</strong> Important system announcements</li>
+                </ul>
+
+                <h6 class="mt-3">Quiet Hours</h6>
+                <p>
+                    Set specific hours during which non-critical notifications will not be sent.
+                    Critical COVID-19 results will always be delivered immediately.
+                </p>
+
+                <h6 class="mt-3">Daily Digest</h6>
+                <p>
+                    Instead of receiving individual notifications throughout the day,
+                    get a single daily summary email.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
