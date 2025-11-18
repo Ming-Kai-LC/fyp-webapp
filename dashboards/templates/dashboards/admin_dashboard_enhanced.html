@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Admin Dashboard - COVID-19 Detection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #6f42c1 0%, #5a32a3 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0.5rem;
+    }
+
+    .system-health-card {
+        border-radius: 1rem;
+        border: 2px solid #dee2e6;
+    }
+
+    .health-indicator {
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .health-indicator.healthy { background-color: #198754; }
+    .health-indicator.unhealthy { background-color: #dc3545; }
+    .health-indicator.warning { background-color: #ffc107; }
+
+    .stat-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card.primary { border-left-color: #0d6efd; }
+    .stat-card.success { border-left-color: #198754; }
+    .stat-card.warning { border-left-color: #ffc107; }
+    .stat-card.danger { border-left-color: #dc3545; }
+    .stat-card.info { border-left-color: #0dcaf0; }
+    .stat-card.purple { border-left-color: #6f42c1; }
+
+    .activity-item {
+        padding: 0.75rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: background-color 0.2s;
+    }
+
+    .activity-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .alert-item {
+        border-left: 4px solid #dc3545;
+        margin-bottom: 1rem;
+    }
+
+    .metric-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .quick-action-btn {
+        margin: 0.5rem;
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header text-center">
+        <h1><i class="bi bi-shield-lock"></i> Admin Dashboard</h1>
+        <p class="mb-0">System Monitoring & Management</p>
+    </div>
+
+    <!-- System Health Monitoring -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card system-health-card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-server"></i> System Health Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-4">
+                            <h6 class="text-muted mb-2">Database</h6>
+                            <div class="mb-2">
+                                <span class="health-indicator {% if db_healthy %}healthy{% else %}unhealthy{% endif %}"></span>
+                            </div>
+                            <span class="badge {% if db_healthy %}bg-success{% else %}bg-danger{% endif %}">
+                                {% if db_healthy %}Operational{% else %}Down{% endif %}
+                            </span>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted mb-2">ML Models</h6>
+                            <div class="mb-2">
+                                <span class="health-indicator healthy"></span>
+                            </div>
+                            <span class="badge bg-success">{{ model_uptime|floatformat:1 }}% Uptime</span>
+                        </div>
+                        <div class="col-md-4">
+                            <h6 class="text-muted mb-2">Average Inference Time</h6>
+                            <div class="metric-value text-primary">{{ avg_inference_time|floatformat:2 }}<small>s</small></div>
+                            <small class="text-muted">per prediction</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards Row 1 -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Users</h6>
+                            <h2 class="mb-0">{{ total_users }}</h2>
+                            <small class="text-muted">Registered accounts</small>
+                        </div>
+                        <i class="bi bi-people-fill text-primary" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Active Sessions</h6>
+                            <h2 class="mb-0">{{ active_sessions }}</h2>
+                            <small class="text-muted">Last 24 hours</small>
+                        </div>
+                        <i class="bi bi-activity text-success" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">New Users Today</h6>
+                            <h2 class="mb-0">{{ new_users_today }}</h2>
+                            <small class="text-muted">Registrations</small>
+                        </div>
+                        <i class="bi bi-person-plus-fill text-info" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards Row 2 -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card purple">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Total Predictions</h6>
+                            <h2 class="mb-0">{{ total_predictions }}</h2>
+                            <small class="text-muted">All time</small>
+                        </div>
+                        <i class="bi bi-file-medical-fill" style="font-size: 3rem; color: #6f42c1;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">COVID Cases</h6>
+                            <h2 class="mb-0">{{ covid_cases }}</h2>
+                            <small class="text-muted">Detected</small>
+                        </div>
+                        <i class="bi bi-shield-exclamation text-danger" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4 mb-3">
+            <div class="card stat-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Today's Predictions</h6>
+                            <h2 class="mb-0">{{ today_predictions }}</h2>
+                            <small class="text-muted">Processed</small>
+                        </div>
+                        <i class="bi bi-graph-up-arrow text-warning" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Widgets -->
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-8 mb-4">
+            <!-- Recent Activities -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-list-ul"></i> Recent Activities
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto;">
+                    {% if recent_activities %}
+                        {% for activity in recent_activities %}
+                        <div class="activity-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-1">
+                                        <i class="bi bi-{% if activity.action == 'login' %}box-arrow-in-right{% elif activity.action == 'logout' %}box-arrow-right{% elif activity.action == 'create' %}plus-circle{% elif activity.action == 'update' %}pencil{% elif activity.action == 'delete' %}trash{% else %}circle{% endif %} me-2"></i>
+                                        <strong>{{ activity.user.username }}</strong>
+                                        <span class="mx-2">•</span>
+                                        <span>{{ activity.action }}</span>
+                                    </div>
+                                    <p class="mb-1 small">{{ activity.description }}</p>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> {{ activity.timestamp|timesince }} ago
+                                        {% if activity.ip_address %}
+                                        <span class="mx-2">•</span>
+                                        <i class="bi bi-geo-alt"></i> {{ activity.ip_address }}
+                                        {% endif %}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{{ activity.get_severity_badge }}">
+                                    {{ activity.severity }}
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted py-4">No recent activities</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{% url 'audit:audit_logs' %}" class="btn btn-sm btn-outline-primary">
+                        <i class="bi bi-journal-text"></i> View Full Audit Log
+                    </a>
+                </div>
+            </div>
+
+            <!-- Model Performance -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="bi bi-cpu"></i> ML Model Performance
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted">Validated Predictions</h6>
+                            <div class="metric-value text-success">{{ validated_count }}</div>
+                            <small class="text-muted">Doctor validated</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h6 class="text-muted">Model Uptime</h6>
+                            <div class="metric-value text-success">{{ model_uptime|floatformat:1 }}%</div>
+                            <small class="text-muted">Last 30 days</small>
+                        </div>
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="{% url 'analytics:dashboard' %}" class="btn btn-success">
+                            <i class="bi bi-bar-chart"></i> View Detailed Analytics
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4 mb-4">
+            <!-- Security Alerts -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-exclamation-triangle-fill"></i> Security Alerts
+                    {% if unacknowledged_alerts %}<span class="badge bg-white text-dark float-end">{{ unacknowledged_alerts.count }}</span>{% endif %}
+                </div>
+                <div class="card-body">
+                    {% if unacknowledged_alerts %}
+                        {% for alert in unacknowledged_alerts %}
+                        <div class="card alert-item">
+                            <div class="card-body p-2">
+                                <h6 class="mb-1 text-danger">
+                                    <i class="bi bi-shield-exclamation"></i>
+                                    {{ alert.alert_type|title }}
+                                </h6>
+                                <p class="mb-1 small">{{ alert.description|truncatewords:15 }}</p>
+                                <small class="text-muted">
+                                    {{ alert.triggered_at|timesince }} ago
+                                </small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'audit:security_alerts' %}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-shield-check"></i> Manage Alerts
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-shield-check" style="font-size: 3rem; color: #198754;"></i>
+                            <p class="text-success mt-3">No security alerts</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <i class="bi bi-lightning-fill"></i> Quick Actions
+                </div>
+                <div class="card-body text-center">
+                    <a href="{% url 'reporting:generate_report' %}" class="btn btn-primary quick-action-btn">
+                        <i class="bi bi-file-earmark-text"></i> Generate Report
+                    </a>
+                    <a href="{% url 'audit:audit_logs' %}" class="btn btn-info quick-action-btn">
+                        <i class="bi bi-journal-text"></i> View Audit Logs
+                    </a>
+                    <a href="{% url 'admin:index' %}" class="btn btn-success quick-action-btn">
+                        <i class="bi bi-gear"></i> Manage System
+                    </a>
+                    <a href="{% url 'analytics:dashboard' %}" class="btn btn-warning quick-action-btn">
+                        <i class="bi bi-graph-up"></i> Analytics
+                    </a>
+                </div>
+            </div>
+
+            <!-- Compliance Status -->
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-check2-square"></i> Compliance Status
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Data Backup</span>
+                            <span class="badge bg-success">Active</span>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Data Retention</span>
+                            <span class="badge bg-success">Compliant</span>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Security Policies</span>
+                            <span class="badge bg-success">Up to Date</span>
+                        </div>
+                        <div class="progress" style="height: 5px;">
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh dashboard every 30 seconds for real-time monitoring
+    setTimeout(function() {
+        location.reload();
+    }, 30000);
+</script>
+{% endblock %}

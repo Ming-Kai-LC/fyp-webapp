@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Dashboard Preferences - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0"><i class="bi bi-gear"></i> Dashboard Preferences</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-4">
+                            <h5>Appearance Settings</h5>
+                            <hr>
+
+                            <div class="mb-3">
+                                <label for="theme" class="form-label">Theme</label>
+                                <select name="theme" id="theme" class="form-select">
+                                    <option value="light" {% if preference.theme == 'light' %}selected{% endif %}>Light</option>
+                                    <option value="dark" {% if preference.theme == 'dark' %}selected{% endif %}>Dark</option>
+                                </select>
+                                <div class="form-text">Choose your preferred color theme</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Refresh Settings</h5>
+                            <hr>
+
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" name="auto_refresh" id="auto_refresh" {% if preference.auto_refresh %}checked{% endif %}>
+                                    <label class="form-check-label" for="auto_refresh">
+                                        Enable Auto-Refresh
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically refresh dashboard data</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="refresh_interval" class="form-label">Refresh Interval (seconds)</label>
+                                <input type="number" name="refresh_interval" id="refresh_interval" class="form-control" value="{{ preference.refresh_interval }}" min="10" max="600">
+                                <div class="form-text">Time between automatic refreshes (10-600 seconds)</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h5>Widget Layout</h5>
+                            <hr>
+                            <p class="text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                Widget customization is available directly on your dashboard.
+                                Drag and drop widgets to rearrange them.
+                            </p>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'home' %}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-save"></i> Save Preferences
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-question-circle"></i> Help</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Dashboard Customization Tips:</h6>
+                    <ul>
+                        <li>Use the theme selector to switch between light and dark modes</li>
+                        <li>Enable auto-refresh to keep your dashboard data up-to-date</li>
+                        <li>Adjust the refresh interval based on your needs (lower values mean more frequent updates)</li>
+                        <li>Widget visibility can be toggled from your dashboard using the widget controls</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

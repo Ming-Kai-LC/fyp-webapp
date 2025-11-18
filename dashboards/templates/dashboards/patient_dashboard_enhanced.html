@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Patient Dashboard - COVID-19 Detection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #198754 0%, #146c43 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0.5rem;
+    }
+
+    .health-summary-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border: 2px solid #dee2e6;
+        border-radius: 1rem;
+    }
+
+    .risk-indicator {
+        font-size: 3rem;
+        font-weight: 700;
+    }
+
+    .risk-low { color: #198754; }
+    .risk-medium { color: #ffc107; }
+    .risk-high { color: #dc3545; }
+
+    .timeline-item {
+        position: relative;
+        padding-left: 2rem;
+        padding-bottom: 1.5rem;
+        border-left: 2px solid #dee2e6;
+    }
+
+    .timeline-item:last-child {
+        border-left: 2px solid transparent;
+    }
+
+    .timeline-marker {
+        position: absolute;
+        left: -0.5rem;
+        width: 1rem;
+        height: 1rem;
+        border-radius: 50%;
+        background-color: white;
+        border: 3px solid;
+    }
+
+    .timeline-marker.covid { border-color: #dc3545; }
+    .timeline-marker.normal { border-color: #198754; }
+    .timeline-marker.pneumonia { border-color: #ffc107; }
+
+    .health-trend-chart {
+        height: 300px;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+    }
+
+    .appointment-card {
+        border-left: 4px solid #0d6efd;
+        margin-bottom: 1rem;
+    }
+
+    .quick-action-btn {
+        margin: 0.5rem;
+        min-width: 150px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header text-center">
+        <h1><i class="bi bi-heart-pulse"></i> My Health Dashboard</h1>
+        <p class="mb-0">Welcome, {{ user.get_full_name|default:user.username }}</p>
+    </div>
+
+    <!-- Health Summary Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card health-summary-card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-3 text-center">
+                            <h6 class="text-muted mb-2">COVID Risk Status</h6>
+                            {% if risk_score %}
+                                <div class="risk-indicator risk-{{ risk_score.level|lower }}">
+                                    {{ risk_score.score }}%
+                                </div>
+                                <span class="badge bg-{{ risk_score.level|lower }}">{{ risk_score.level }}</span>
+                            {% else %}
+                                <div class="risk-indicator risk-low">-</div>
+                                <span class="badge bg-secondary">No Data</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h6 class="text-muted mb-2">Total Tests</h6>
+                            <h2>{{ predictions.count }}</h2>
+                            <small class="text-muted">X-Ray Scans</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h6 class="text-muted mb-2">Upcoming Appointments</h6>
+                            <h2>{{ upcoming_appointments.count }}</h2>
+                            <small class="text-muted">Scheduled</small>
+                        </div>
+                        <div class="col-md-3 text-center">
+                            <h6 class="text-muted mb-2">Notifications</h6>
+                            <h2>{{ unread_notifications.count }}</h2>
+                            <small class="text-muted">Unread</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Widgets -->
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-6 mb-4">
+            <!-- Test Results Timeline -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-graph-up"></i> Test Results Timeline
+                </div>
+                <div class="card-body">
+                    {% if predictions %}
+                        <div class="timeline">
+                            {% for prediction in predictions %}
+                            <div class="timeline-item">
+                                <div class="timeline-marker {{ prediction.final_diagnosis|lower }}"></div>
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="mb-1">{{ prediction.xray.upload_date|date:"M d, Y" }}</h6>
+                                            <span class="badge {% if prediction.final_diagnosis == 'COVID' %}bg-danger{% elif prediction.final_diagnosis == 'NORMAL' %}bg-success{% else %}bg-warning{% endif %}">
+                                                {{ prediction.final_diagnosis }}
+                                            </span>
+                                            <span class="badge bg-secondary">{{ prediction.consensus_confidence|floatformat:1 }}%</span>
+                                        </div>
+                                        <a href="{% url 'detection:prediction_detail' prediction.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-eye"></i> View
+                                        </a>
+                                    </div>
+                                    {% if prediction.doctor_notes %}
+                                    <p class="mb-0 mt-2 text-muted small">
+                                        <strong>Notes:</strong> {{ prediction.doctor_notes|truncatewords:15 }}
+                                    </p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-file-medical" style="font-size: 3rem; color: #dee2e6;"></i>
+                            <p class="text-muted mt-3">No test results yet</p>
+                            <a href="{% url 'detection:upload_xray' %}" class="btn btn-primary">
+                                <i class="bi bi-cloud-upload"></i> Upload Your First X-Ray
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Health Trends Chart -->
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <i class="bi bi-bar-chart-line"></i> Health Trends
+                </div>
+                <div class="card-body">
+                    {% if predictions.count > 1 %}
+                        <canvas id="healthTrendChart"></canvas>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <p class="text-muted">Need at least 2 test results to show trends</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-6 mb-4">
+            <!-- Upcoming Appointments -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <i class="bi bi-calendar-event"></i> Upcoming Appointments
+                </div>
+                <div class="card-body">
+                    {% if upcoming_appointments %}
+                        {% for appointment in upcoming_appointments %}
+                        <div class="card appointment-card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="bi bi-person-badge"></i>
+                                            Dr. {{ appointment.doctor.get_full_name }}
+                                        </h6>
+                                        <p class="mb-1">
+                                            <i class="bi bi-calendar3"></i> {{ appointment.appointment_date|date:"l, M d, Y" }}
+                                        </p>
+                                        <p class="mb-1">
+                                            <i class="bi bi-clock"></i> {{ appointment.appointment_time }}
+                                        </p>
+                                        {% if appointment.reason %}
+                                        <p class="mb-0 text-muted small">{{ appointment.reason }}</p>
+                                        {% endif %}
+                                    </div>
+                                    <span class="badge bg-{{ appointment.get_status_badge }}">
+                                        {{ appointment.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-calendar-x" style="font-size: 3rem; color: #dee2e6;"></i>
+                            <p class="text-muted mt-3">No upcoming appointments</p>
+                            <a href="{% url 'appointments:create' %}" class="btn btn-info">
+                                <i class="bi bi-calendar-plus"></i> Book an Appointment
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <i class="bi bi-lightning-fill"></i> Quick Actions
+                </div>
+                <div class="card-body text-center">
+                    <a href="{% url 'appointments:create' %}" class="btn btn-success quick-action-btn">
+                        <i class="bi bi-calendar-plus"></i> Book Appointment
+                    </a>
+                    <a href="{% url 'detection:upload_xray' %}" class="btn btn-primary quick-action-btn">
+                        <i class="bi bi-cloud-upload"></i> Upload X-Ray
+                    </a>
+                    <a href="{% url 'detection:prediction_list' %}" class="btn btn-info quick-action-btn">
+                        <i class="bi bi-file-medical"></i> View History
+                    </a>
+                    <a href="{% url 'medical_records:patient_records' %}" class="btn btn-secondary quick-action-btn">
+                        <i class="bi bi-folder2-open"></i> Medical Records
+                    </a>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                    {% if unread_notifications %}<span class="badge bg-white text-dark float-end">{{ unread_notifications.count }}</span>{% endif %}
+                </div>
+                <div class="card-body">
+                    {% if unread_notifications %}
+                        {% for notification in unread_notifications %}
+                        <div class="d-flex justify-content-between align-items-start mb-3 pb-3 border-bottom">
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1">{{ notification.title }}</h6>
+                                <p class="mb-1 small">{{ notification.message|truncatewords:20 }}</p>
+                                <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                            </div>
+                            <i class="bi bi-circle-fill text-danger" style="font-size: 0.5rem;"></i>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center">
+                            <a href="{% url 'notifications:list' %}" class="btn btn-sm btn-outline-danger">
+                                View All Notifications
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted py-4">No new notifications</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    {% if predictions.count > 1 %}
+    // Health Trends Chart
+    const ctx = document.getElementById('healthTrendChart');
+    if (ctx) {
+        const trendData = {{ trend_data|safe }};
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.dates,
+                datasets: [{
+                    label: 'Confidence Level',
+                    data: trendData.confidences,
+                    borderColor: '#0d6efd',
+                    backgroundColor: 'rgba(13, 110, 253, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Test Confidence Over Time'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    {% endif %}
+</script>
+{% endblock %}
