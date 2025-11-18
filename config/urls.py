@@ -25,6 +25,8 @@ urlpatterns = [
     path("medical-records/", include("medical_records.urls")),
     # Reporting URLs
     path("reporting/", include("reporting.urls")),
+    # Audit & Compliance URLs
+    path("audit/", include("audit.urls")),
 ]
 
 # Serve media files in development

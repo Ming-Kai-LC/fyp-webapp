@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Data Change History - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i class="bi bi-clock-history"></i> Data Change History</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Object Information</h5>
+        </div>
+        <div class="card-body">
+            <p><strong>Content Type:</strong> {{ content_type }}</p>
+            <p><strong>Object ID:</strong> {{ object_id }}</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Change History</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Changed By</th>
+                            <th>Field</th>
+                            <th>Old Value</th>
+                            <th>New Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for change in changes %}
+                        <tr>
+                            <td>{{ change.changed_at|date:"Y-m-d H:i:s" }}</td>
+                            <td>{{ change.changed_by.username|default:"System" }}</td>
+                            <td><strong>{{ change.field_name }}</strong></td>
+                            <td><code>{{ change.old_value|truncatechars:50 }}</code></td>
+                            <td><code>{{ change.new_value|truncatechars:50 }}</code></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No change history available</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

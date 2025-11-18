@@ -1,0 +1,46 @@
+{% extends 'base.html' %}
+
+{% block title %}Acknowledge Alert - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <h1 class="mb-4"><i class="bi bi-check-circle"></i> Acknowledge Security Alert</h1>
+
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="card-title mb-0">Alert Details</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Type:</strong> {{ alert.get_alert_type_display }}</p>
+                    <p><strong>Severity:</strong>
+                        <span class="badge bg-{{ alert.severity }}">{{ alert.get_severity_display }}</span>
+                    </p>
+                    <p><strong>Triggered:</strong> {{ alert.triggered_at|date:"Y-m-d H:i:s" }}</p>
+                    <p><strong>Description:</strong> {{ alert.description }}</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="resolution_notes" class="form-label">Resolution Notes</label>
+                            <textarea class="form-control" id="resolution_notes" name="resolution_notes" rows="4" required></textarea>
+                            <div class="form-text">Describe how this alert was resolved or investigated.</div>
+                        </div>
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Acknowledge Alert
+                            </button>
+                            <a href="{% url 'audit:security_alerts_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

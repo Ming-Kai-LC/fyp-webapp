@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Security Alerts - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4"><i class="bi bi-exclamation-triangle-fill text-danger"></i> Security Alerts Dashboard</h1>
+
+            <!-- Alert Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-white bg-danger">
+                        <div class="card-body">
+                            <h3>{{ critical_alerts.count }}</h3>
+                            <p class="mb-0">Critical Alerts</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-warning">
+                        <div class="card-body">
+                            <h3>{{ unacknowledged_alerts.count }}</h3>
+                            <p class="mb-0">Unacknowledged</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-white bg-info">
+                        <div class="card-body">
+                            <h3>{{ recent_alerts.count }}</h3>
+                            <p class="mb-0">Last 7 Days</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unacknowledged Alerts -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning">
+                    <h5 class="card-title mb-0"><i class="bi bi-bell-fill"></i> Unacknowledged Alerts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Description</th>
+                                    <th>User</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in unacknowledged_alerts %}
+                                <tr>
+                                    <td>{{ alert.triggered_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ alert.get_alert_type_display }}</td>
+                                    <td>
+                                        {% if alert.severity == 'critical' %}
+                                            <span class="badge bg-danger">{{ alert.get_severity_display }}</span>
+                                        {% elif alert.severity == 'high' %}
+                                            <span class="badge bg-warning">{{ alert.get_severity_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ alert.get_severity_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.description }}</td>
+                                    <td>{{ alert.user.username|default:"System" }}</td>
+                                    <td>
+                                        <a href="{% url 'audit:acknowledge_alert' alert.id %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-check-circle"></i> Acknowledge
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center text-success">
+                                        <i class="bi bi-check-circle-fill"></i> No unacknowledged alerts
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Statistics -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0"><i class="bi bi-bar-chart"></i> Alert Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Alert Type</th>
+                                <th>Count</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for stat in alert_stats %}
+                            <tr>
+                                <td>{{ stat.alert_type }}</td>
+                                <td><span class="badge bg-secondary">{{ stat.count }}</span></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
