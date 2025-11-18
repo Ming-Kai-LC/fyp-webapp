@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Prediction Results - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4"><i class="bi bi-bar-chart"></i> Prediction Results</h2>
+
+        {% if prediction %}
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">X-Ray Image</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <img src="{{ prediction.xray.original_image.url }}" class="img-fluid rounded" alt="X-Ray">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">Final Diagnosis</h5>
+                    </div>
+                    <div class="card-body text-center">
+                        <h1 class="display-4 prediction-result text-{{ prediction.final_diagnosis == 'COVID' and 'danger' or 'success' }}">
+                            {{ prediction.final_diagnosis }}
+                        </h1>
+                        <p class="lead">Confidence: {{ prediction.consensus_confidence|floatformat:2 }}%</p>
+                        <p class="text-muted">Model Agreement: {{ prediction.get_model_agreement }}/6 models</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-cpu"></i> Multi-Model Comparison (Spotlight Feature #1)</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Model</th>
+                                <th>Prediction</th>
+                                <th>Confidence</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr class="table-primary">
+                                <td><strong>CrossViT (Ours)</strong></td>
+                                <td><span class="badge bg-{{ prediction.crossvit_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.crossvit_prediction }}</span></td>
+                                <td>{{ prediction.crossvit_confidence|floatformat:2 }}%</td>
+                            </tr>
+                            <tr>
+                                <td>ResNet-50</td>
+                                <td><span class="badge bg-{{ prediction.resnet50_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.resnet50_prediction }}</span></td>
+                                <td>{{ prediction.resnet50_confidence|floatformat:2 }}%</td>
+                            </tr>
+                            <tr>
+                                <td>DenseNet-121</td>
+                                <td><span class="badge bg-{{ prediction.densenet121_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.densenet121_prediction }}</span></td>
+                                <td>{{ prediction.densenet121_confidence|floatformat:2 }}%</td>
+                            </tr>
+                            <tr>
+                                <td>EfficientNet-B0</td>
+                                <td><span class="badge bg-{{ prediction.efficientnet_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.efficientnet_prediction }}</span></td>
+                                <td>{{ prediction.efficientnet_confidence|floatformat:2 }}%</td>
+                            </tr>
+                            <tr>
+                                <td>ViT-Base</td>
+                                <td><span class="badge bg-{{ prediction.vit_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.vit_prediction }}</span></td>
+                                <td>{{ prediction.vit_confidence|floatformat:2 }}%</td>
+                            </tr>
+                            <tr>
+                                <td>Swin-Tiny</td>
+                                <td><span class="badge bg-{{ prediction.swin_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.swin_prediction }}</span></td>
+                                <td>{{ prediction.swin_confidence|floatformat:2 }}%</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <a href="{% url 'detection:explain_prediction' prediction.id %}" class="btn btn-primary btn-lg">
+                <i class="bi bi-eye"></i> View Explainability (Spotlight #2)
+            </a>
+            <a href="{% url 'detection:upload_xray' %}" class="btn btn-outline-primary btn-lg">
+                <i class="bi bi-cloud-upload"></i> Upload Another
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -20,9 +20,9 @@ from .forms import (
     PatientProfileForm,
     DoctorNotesForm,
 )
-from .ml_engine import model_ensemble
-from .preprocessing import apply_clahe
-from .explainability import generate_explainability_report
+from .ml_engine_stub import model_ensemble
+from .preprocessing_stub import apply_clahe
+from .explainability_stub import generate_explainability_report
 
 import os
 import logging

@@ -1,0 +1,43 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Upload X-Ray - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <h2 class="mb-4"><i class="bi bi-cloud-upload"></i> Upload Chest X-Ray</h2>
+
+        <div class="card">
+            <div class="card-body">
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Note:</strong> Supported formats: JPG, JPEG, PNG. Maximum size: 10MB.
+                        The system will analyze the image using 6 AI models.
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-cpu"></i> Analyze with AI Models
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-body">
+                <h5 class="card-title">What Happens Next?</h5>
+                <ol>
+                    <li>Image preprocessing with CLAHE enhancement</li>
+                    <li>Analysis by 6 AI models (CrossViT, ResNet, DenseNet, EfficientNet, ViT, Swin)</li>
+                    <li>Multi-model comparison and consensus prediction</li>
+                    <li>Generation of explainability visualizations</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

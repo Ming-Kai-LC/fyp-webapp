@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+
+{% block title %}Explainability - COVID-19 Detection{% endblock %}
+
+{% block content %}
+<h2 class="mb-4"><i class="bi bi-eye"></i> Explainable AI Visualization (Spotlight Feature #2)</h2>
+
+{% if prediction %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">Original X-Ray</h5>
+            </div>
+            <div class="card-body text-center">
+                <img src="{{ prediction.xray.original_image.url }}" class="img-fluid rounded" alt="Original X-Ray">
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Grad-CAM Heatmap</h5>
+            </div>
+            <div class="card-body text-center">
+                {% if prediction.gradcam_heatmap %}
+                <img src="{{ prediction.gradcam_heatmap.url }}" class="img-fluid rounded" alt="Grad-CAM Heatmap">
+                <p class="text-muted mt-2">Red regions indicate areas that influenced the AI decision</p>
+                {% else %}
+                <p class="text-muted">Heatmap not yet generated. Processing...</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">CrossViT Dual-Branch Attention Maps</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 text-center">
+                        <h6>Large Branch Attention</h6>
+                        {% if prediction.large_branch_attention %}
+                        <img src="{{ prediction.large_branch_attention.url }}" class="img-fluid rounded" alt="Large Branch">
+                        {% else %}
+                        <p class="text-muted">Processing...</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 text-center">
+                        <h6>Small Branch Attention</h6>
+                        {% if prediction.small_branch_attention %}
+                        <img src="{{ prediction.small_branch_attention.url }}" class="img-fluid rounded" alt="Small Branch">
+                        {% else %}
+                        <p class="text-muted">Processing...</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">Interpretation</h5>
+            </div>
+            <div class="card-body">
+                <h6>Diagnosis: <span class="badge bg-{{ prediction.final_diagnosis == 'COVID' and 'danger' or 'success' }}">{{ prediction.final_diagnosis }}</span></h6>
+                <p><strong>Confidence:</strong> {{ prediction.consensus_confidence|floatformat:2 }}%</p>
+                <p><strong>Model Agreement:</strong> {{ prediction.get_model_agreement }}/6 models agree</p>
+
+                <div class="alert alert-info">
+                    <strong>How to interpret:</strong>
+                    <ul class="mb-0">
+                        <li>Heatmap shows which lung regions influenced the AI decision (red = high importance)</li>
+                        <li>CrossViT's dual-branch architecture analyzes both large and small image patches</li>
+                        <li>Higher model agreement indicates more confidence in the diagnosis</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="text-center">
+    <a href="{% url 'detection:view_results' prediction.id %}" class="btn btn-primary">
+        <i class="bi bi-bar-chart"></i> Back to Results
+    </a>
+    <a href="{% url 'detection:upload_xray' %}" class="btn btn-outline-primary">
+        <i class="bi bi-cloud-upload"></i> Upload Another
+    </a>
+</div>
+{% endif %}
+{% endblock %}
