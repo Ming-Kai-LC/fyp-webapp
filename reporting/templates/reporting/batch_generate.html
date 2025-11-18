@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Batch Generate Reports - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-files me-2"></i>Batch Report Generation</h2>
+                <a href="{% url 'reporting:report_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Reports
+                </a>
+            </div>
+
+            <!-- Info Alert -->
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle me-2"></i>
+                <strong>Batch Generation:</strong> Select multiple predictions and generate reports for all of them at once.
+                All reports will be compiled into a single ZIP file for easy download.
+            </div>
+
+            <!-- Batch Form Card -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-gear me-2"></i>Configure Batch Generation</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" action="">
+                        {% csrf_token %}
+
+                        <!-- Template Selection -->
+                        <div class="mb-4">
+                            <label for="{{ form.template.id_for_label }}" class="form-label">
+                                <strong>{{ form.template.label }}</strong>
+                            </label>
+                            {{ form.template }}
+                            {% if form.template.errors %}
+                                <div class="text-danger">{{ form.template.errors }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">
+                                Select the template to use for all reports in this batch.
+                            </small>
+                        </div>
+
+                        <hr>
+
+                        <!-- Predictions Selection -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <strong>Select Predictions</strong>
+                            </label>
+                            <div class="border rounded p-3" style="max-height: 400px; overflow-y: auto;">
+                                {% for prediction in form.predictions.field.queryset %}
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox"
+                                           name="predictions" value="{{ prediction.id }}"
+                                           id="prediction_{{ prediction.id }}">
+                                    <label class="form-check-label" for="prediction_{{ prediction.id }}">
+                                        <strong>{{ prediction.xray.patient.user.get_full_name }}</strong> -
+                                        <span class="badge {% if prediction.final_diagnosis == 'COVID-19' %}bg-danger{% elif prediction.final_diagnosis == 'Normal' %}bg-success{% else %}bg-warning{% endif %}">
+                                            {{ prediction.final_diagnosis }}
+                                        </span>
+                                        <small class="text-muted">
+                                            ({{ prediction.xray.upload_date|date:"M d, Y" }},
+                                            {{ prediction.consensus_confidence|floatformat:1 }}% confidence)
+                                        </small>
+                                    </label>
+                                </div>
+                                {% empty %}
+                                <p class="text-muted">No predictions available for batch processing.</p>
+                                {% endfor %}
+                            </div>
+                            {% if form.predictions.errors %}
+                                <div class="text-danger mt-2">{{ form.predictions.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Batch Actions -->
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary" id="selectAll">
+                                <i class="bi bi-check-all me-2"></i>Select All
+                            </button>
+                            <button type="button" class="btn btn-outline-secondary" id="deselectAll">
+                                <i class="bi bi-x-circle me-2"></i>Deselect All
+                            </button>
+                        </div>
+
+                        <hr>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-files me-2"></i>Generate Batch Reports
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('selectAll').addEventListener('click', function() {
+        document.querySelectorAll('input[name="predictions"]').forEach(function(checkbox) {
+            checkbox.checked = true;
+        });
+    });
+
+    document.getElementById('deselectAll').addEventListener('click', function() {
+        document.querySelectorAll('input[name="predictions"]').forEach(function(checkbox) {
+            checkbox.checked = false;
+        });
+    });
+</script>
+{% endblock %}

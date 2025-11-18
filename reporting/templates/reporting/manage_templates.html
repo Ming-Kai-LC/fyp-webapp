@@ -1,0 +1,89 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Templates - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2><i class="bi bi-file-earmark-text me-2"></i>Report Templates</h2>
+                <a href="{% url 'reporting:report_list' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> Back to Reports
+                </a>
+            </div>
+
+            <!-- Templates Grid -->
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                {% for template in templates %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-header {% if template.template_type == 'standard' %}bg-primary{% elif template.template_type == 'detailed' %}bg-info{% elif template.template_type == 'summary' %}bg-success{% else %}bg-warning{% endif %} text-white">
+                            <h5 class="mb-0">
+                                <i class="bi bi-file-earmark-{{ template.template_type }} me-2"></i>
+                                {{ template.name }}
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="card-text">{{ template.description|default:"No description available." }}</p>
+                            <hr>
+                            <p class="mb-1"><strong>Type:</strong>
+                                <span class="badge bg-secondary">{{ template.get_template_type_display }}</span>
+                            </p>
+                            <p class="mb-1"><strong>Status:</strong>
+                                {% if template.is_active %}
+                                <span class="badge bg-success">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger">Inactive</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-1"><strong>Created:</strong> {{ template.created_at|date:"M d, Y" }}</p>
+                            <p class="mb-1"><strong>Updated:</strong> {{ template.updated_at|date:"M d, Y" }}</p>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-sm btn-outline-primary" disabled>
+                                    <i class="bi bi-pencil me-1"></i>Edit Template
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-warning text-center" role="alert">
+                        <i class="bi bi-inbox display-4 d-block mb-3"></i>
+                        <h4>No Templates Found</h4>
+                        <p class="mb-0">Please create a report template in the admin panel to get started.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Info Section -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="bi bi-info-circle me-2"></i>Template Information</h5>
+                </div>
+                <div class="card-body">
+                    <h6>Template Types:</h6>
+                    <ul>
+                        <li><strong>Standard Report:</strong> Basic report with essential patient and diagnosis information.</li>
+                        <li><strong>Detailed Report:</strong> Comprehensive report including all model predictions and detailed analysis.</li>
+                        <li><strong>Summary Report:</strong> Concise report highlighting key findings and recommendations.</li>
+                        <li><strong>Research Export:</strong> Data-focused template optimized for research and statistical analysis.</li>
+                    </ul>
+                    <hr>
+                    <p class="mb-0 text-muted">
+                        <i class="bi bi-lightbulb me-1"></i>
+                        <strong>Tip:</strong> Templates can be created and edited in the Django admin panel.
+                        Navigate to Admin > Report Templates to manage your templates.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
