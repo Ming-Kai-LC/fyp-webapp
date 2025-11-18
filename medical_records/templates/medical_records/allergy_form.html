@@ -1,0 +1,29 @@
+{% extends 'medical_records/base_medical.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}{% if allergy %}Edit{% else %}Add{% endif %} Allergy{% endblock %}
+
+{% block medical_content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h4><i class="bi bi-exclamation-triangle"></i> {% if allergy %}Edit{% else %}Add New{% endif %} Allergy</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning">
+            <i class="bi bi-info-circle"></i> Accurate allergy information is critical for patient safety.
+        </div>
+        <form method="post">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-4">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-save"></i> Save Allergy
+                </button>
+                <a href="{% url 'medical_records:allergy_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

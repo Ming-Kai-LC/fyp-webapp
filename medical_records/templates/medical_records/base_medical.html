@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .medical-sidebar {
+        background-color: #f8f9fa;
+        min-height: 500px;
+        border-radius: 0.5rem;
+        padding: 1.5rem;
+    }
+
+    .medical-sidebar .nav-link {
+        color: #495057;
+        padding: 0.75rem 1rem;
+        margin-bottom: 0.5rem;
+        border-radius: 0.375rem;
+        transition: all 0.3s;
+    }
+
+    .medical-sidebar .nav-link:hover,
+    .medical-sidebar .nav-link.active {
+        background-color: #0d6efd;
+        color: white;
+    }
+
+    .allergy-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+    }
+
+    .severity-severe {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .severity-moderate {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .severity-mild {
+        background-color: #0dcaf0;
+        color: #000;
+    }
+
+    .risk-very_high {
+        background-color: #8b0000;
+        color: white;
+    }
+
+    .risk-high {
+        background-color: #dc3545;
+        color: white;
+    }
+
+    .risk-moderate {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    .risk-low {
+        background-color: #198754;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3">
+            <div class="medical-sidebar">
+                <h5 class="mb-3"><i class="bi bi-heart-pulse"></i> Medical Records</h5>
+                <ul class="nav flex-column">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:condition_list' %}">
+                            <i class="bi bi-clipboard2-pulse"></i> Medical Conditions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:allergy_list' %}">
+                            <i class="bi bi-exclamation-triangle"></i> Allergies
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:medication_list' %}">
+                            <i class="bi bi-capsule"></i> Medications
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:vaccination_list' %}">
+                            <i class="bi bi-shield-fill-check"></i> Vaccinations
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:document_list' %}">
+                            <i class="bi bi-file-earmark-medical"></i> Documents
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:medical_summary' patient.id %}">
+                            <i class="bi bi-file-text"></i> Medical Summary
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'medical_records:calculate_risk_score' patient.id %}">
+                            <i class="bi bi-graph-up"></i> Risk Assessment
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-9">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            {% block medical_content %}{% endblock %}
+        </div>
+    </div>
+</div>
+{% endblock %}
