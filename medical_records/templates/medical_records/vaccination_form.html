@@ -1,0 +1,26 @@
+{% extends 'medical_records/base_medical.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Add Vaccination{% endblock %}
+
+{% block medical_content %}
+<div class="card">
+    <div class="card-header bg-success text-white">
+        <h4><i class="bi bi-shield-fill-check"></i> Add Vaccination Record</h4>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-4">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-save"></i> Save Vaccination
+                </button>
+                <a href="{% url 'medical_records:vaccination_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,173 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Medical Summary - {{ patient.user.get_full_name }}{% endblock %}
+
+{% block medical_content %}
+<div class="mb-4">
+    <h2><i class="bi bi-file-text"></i> Medical Summary</h2>
+    <p class="text-muted">Patient: {{ patient.user.get_full_name }} | Age: {{ patient.age }}</p>
+</div>
+
+<!-- Risk Score Card -->
+{% if latest_risk_score %}
+<div class="card mb-4 border-{% if latest_risk_score.risk_level == 'very_high' %}danger{% elif latest_risk_score.risk_level == 'high' %}warning{% elif latest_risk_score.risk_level == 'moderate' %}info{% else %}success{% endif %}">
+    <div class="card-header bg-{% if latest_risk_score.risk_level == 'very_high' %}danger{% elif latest_risk_score.risk_level == 'high' %}warning{% elif latest_risk_score.risk_level == 'moderate' %}info{% else %}success{% endif %} text-white">
+        <h5 class="mb-0"><i class="bi bi-graph-up"></i> COVID-19 Risk Assessment</h5>
+    </div>
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-4 text-center">
+                <h1 class="display-4">{{ latest_risk_score.total_score }}</h1>
+                <h4><span class="badge risk-{{ latest_risk_score.risk_level }} p-3">{{ latest_risk_score.get_risk_level_display }}</span></h4>
+            </div>
+            <div class="col-md-8">
+                <p class="mb-1"><strong>Age Score:</strong> {{ latest_risk_score.age_score }}</p>
+                <p class="mb-1"><strong>Comorbidity Score:</strong> {{ latest_risk_score.comorbidity_score }}</p>
+                <p class="mb-1"><strong>Lifestyle Score:</strong> {{ latest_risk_score.lifestyle_score }}</p>
+                <p class="mb-1"><strong>Vaccination Score:</strong> {{ latest_risk_score.vaccination_score }}</p>
+                <p class="text-muted mt-2"><small>Calculated: {{ latest_risk_score.calculated_at|date:"F d, Y H:i" }}</small></p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row">
+    <!-- Active Medical Conditions -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-clipboard2-pulse"></i> Active Conditions</h5>
+            </div>
+            <div class="card-body">
+                {% if conditions %}
+                    <ul class="list-group list-group-flush">
+                        {% for condition in conditions %}
+                            <li class="list-group-item">
+                                <strong>{{ condition.condition_name }}</strong>
+                                <span class="badge severity-{{ condition.severity }} float-end">{{ condition.get_severity_display }}</span>
+                                {% if condition.increases_covid_risk %}
+                                    <br><small class="text-danger"><i class="bi bi-exclamation-triangle"></i> Increases COVID risk</small>
+                                {% endif %}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No active medical conditions</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Allergies -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Allergies</h5>
+            </div>
+            <div class="card-body">
+                {% if allergies %}
+                    <ul class="list-group list-group-flush">
+                        {% for allergy in allergies %}
+                            <li class="list-group-item">
+                                <strong>{{ allergy.allergen }}</strong>
+                                <span class="badge severity-{{ allergy.severity }} float-end">{{ allergy.get_severity_display }}</span>
+                                <br><small>{{ allergy.reaction_description }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No known allergies</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Medications -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="bi bi-capsule"></i> Current Medications</h5>
+            </div>
+            <div class="card-body">
+                {% if medications %}
+                    <ul class="list-group list-group-flush">
+                        {% for med in medications %}
+                            <li class="list-group-item">
+                                <strong>{{ med.medication_name }}</strong>
+                                <br><small>{{ med.dosage }} - {{ med.frequency }}</small>
+                                <br><small class="text-muted">{{ med.purpose }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No current medications</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Vaccinations -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0"><i class="bi bi-shield-fill-check"></i> Recent Vaccinations</h5>
+            </div>
+            <div class="card-body">
+                {% if vaccinations %}
+                    <ul class="list-group list-group-flush">
+                        {% for vacc in vaccinations %}
+                            <li class="list-group-item">
+                                <strong>{{ vacc.get_vaccine_name_display }}</strong>
+                                <span class="badge bg-primary float-end">Dose {{ vacc.dose_number }}</span>
+                                <br><small>{{ vacc.administered_date|date:"M d, Y" }}</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">No vaccination records</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Lifestyle Information -->
+    {% if lifestyle %}
+    <div class="col-md-12 mb-4">
+        <div class="card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-heart"></i> Lifestyle Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <p><strong>Smoking:</strong> {{ lifestyle.get_smoking_status_display }}</p>
+                        <p><strong>Alcohol Use:</strong> {{ lifestyle.get_alcohol_use_display }}</p>
+                    </div>
+                    <div class="col-md-4">
+                        <p><strong>Exercise:</strong> {{ lifestyle.get_exercise_level_display }}</p>
+                        {% if lifestyle.occupation %}
+                            <p><strong>Occupation:</strong> {{ lifestyle.occupation }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-4">
+                        {% if lifestyle.occupational_exposure_risk %}
+                            <div class="alert alert-warning mb-0">
+                                <i class="bi bi-exclamation-triangle"></i> High occupational COVID exposure risk
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Actions -->
+<div class="mt-4">
+    <a href="{% url 'medical_records:calculate_risk_score' patient.id %}" class="btn btn-primary">
+        <i class="bi bi-calculator"></i> {% if latest_risk_score %}Recalculate{% else %}Calculate{% endif %} Risk Score
+    </a>
+</div>
+{% endblock %}

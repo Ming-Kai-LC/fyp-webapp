@@ -1,0 +1,77 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Medications - Medical Records{% endblock %}
+
+{% block medical_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-capsule"></i> Medications</h2>
+    <a href="{% url 'medical_records:add_medication' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Medication
+    </a>
+</div>
+
+<h4 class="mt-4 mb-3">Current Medications</h4>
+{% if current_medications %}
+    <div class="row">
+        {% for med in current_medications %}
+            <div class="col-md-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ med.medication_name }}</h5>
+                        <p class="mb-2"><strong>Dosage:</strong> {{ med.dosage }}</p>
+                        <p class="mb-2"><strong>Frequency:</strong> {{ med.frequency }}</p>
+                        <p class="mb-2"><strong>Route:</strong> {{ med.route }}</p>
+                        <p class="mb-2"><strong>Purpose:</strong> {{ med.purpose }}</p>
+                        <p class="text-muted mb-0"><small>Started: {{ med.start_date|date:"M d, Y" }}</small></p>
+                        <div class="mt-3">
+                            <a href="{% url 'medical_records:edit_medication' med.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No current medications.
+    </div>
+{% endif %}
+
+<h4 class="mt-5 mb-3">Past Medications</h4>
+{% if past_medications %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Medication</th>
+                    <th>Dosage</th>
+                    <th>Status</th>
+                    <th>Period</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for med in past_medications %}
+                    <tr>
+                        <td>{{ med.medication_name }}</td>
+                        <td>{{ med.dosage }}</td>
+                        <td><span class="badge bg-secondary">{{ med.get_status_display }}</span></td>
+                        <td>{{ med.start_date|date:"M Y" }} - {% if med.end_date %}{{ med.end_date|date:"M Y" }}{% else %}N/A{% endif %}</td>
+                        <td>
+                            <a href="{% url 'medical_records:edit_medication' med.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No past medications recorded.
+    </div>
+{% endif %}
+{% endblock %}
