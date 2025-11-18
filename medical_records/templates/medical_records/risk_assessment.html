@@ -1,0 +1,121 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}COVID-19 Risk Assessment - {{ patient.user.get_full_name }}{% endblock %}
+
+{% block medical_content %}
+<div class="mb-4">
+    <h2><i class="bi bi-graph-up"></i> COVID-19 Risk Assessment</h2>
+    <p class="text-muted">Patient: {{ patient.user.get_full_name }} | Calculated: {{ risk_score.calculated_at|date:"F d, Y H:i" }}</p>
+</div>
+
+<!-- Overall Risk Score -->
+<div class="card mb-4 border-{% if risk_score.risk_level == 'very_high' %}danger{% elif risk_score.risk_level == 'high' %}warning{% elif risk_score.risk_level == 'moderate' %}info{% else %}success{% endif %} shadow">
+    <div class="card-header bg-{% if risk_score.risk_level == 'very_high' %}danger{% elif risk_score.risk_level == 'high' %}warning{% elif risk_score.risk_level == 'moderate' %}info{% else %}success{% endif %} text-white">
+        <h4 class="mb-0"><i class="bi bi-shield-exclamation"></i> Overall Risk Assessment</h4>
+    </div>
+    <div class="card-body text-center py-5">
+        <h1 class="display-1 mb-3">{{ risk_score.total_score }}</h1>
+        <h2><span class="badge risk-{{ risk_score.risk_level }} p-3 fs-4">{{ risk_score.get_risk_level_display }}</span></h2>
+    </div>
+</div>
+
+<!-- Score Breakdown -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-calendar"></i> Age</h5>
+                <h2 class="text-primary">{{ risk_score.age_score }}</h2>
+                <p class="text-muted mb-0">{{ risk_score.risk_factors.age.details }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-heart-pulse"></i> Comorbidities</h5>
+                <h2 class="text-danger">{{ risk_score.comorbidity_score }}</h2>
+                <p class="text-muted mb-0">{{ risk_score.risk_factors.comorbidity.details.high_risk_conditions|length }} high-risk condition(s)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-heart"></i> Lifestyle</h5>
+                <h2 class="text-warning">{{ risk_score.lifestyle_score }}</h2>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <h5 class="card-title"><i class="bi bi-shield-check"></i> Vaccination</h5>
+                <h2 class="{% if risk_score.vaccination_score < 0 %}text-success{% else %}text-danger{% endif %}">{{ risk_score.vaccination_score }}</h2>
+                <p class="text-muted mb-0">{{ risk_score.risk_factors.vaccination.details.protection_level }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Risk Factors -->
+<div class="card mb-4">
+    <div class="card-header bg-light">
+        <h5 class="mb-0"><i class="bi bi-list-check"></i> Risk Factor Details</h5>
+    </div>
+    <div class="card-body">
+        {% if risk_score.risk_factors.comorbidity.details.high_risk_conditions %}
+            <h6 class="text-danger"><i class="bi bi-exclamation-triangle"></i> High-Risk Medical Conditions</h6>
+            <ul class="mb-3">
+                {% for condition in risk_score.risk_factors.comorbidity.details.high_risk_conditions %}
+                    <li>
+                        <strong>{{ condition.name }}</strong>
+                        ({{ condition.severity }})
+                        <span class="badge bg-danger">+{{ condition.score_added }} points</span>
+                    </li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <h6><i class="bi bi-shield-check"></i> Vaccination Status</h6>
+        <p>
+            <strong>COVID-19 Doses:</strong> {{ risk_score.risk_factors.vaccination.details.covid_doses }}<br>
+            <strong>Protection Level:</strong> {{ risk_score.risk_factors.vaccination.details.protection_level }}
+            {% if risk_score.risk_factors.vaccination.details.latest_dose %}
+                <br><strong>Latest Dose:</strong> {{ risk_score.risk_factors.vaccination.details.latest_dose }}
+            {% endif %}
+        </p>
+
+        <h6><i class="bi bi-heart"></i> Lifestyle Factors</h6>
+        <p>
+            <strong>Smoking:</strong> {{ risk_score.risk_factors.lifestyle.details.smoking }}<br>
+            <strong>Exercise:</strong> {{ risk_score.risk_factors.lifestyle.details.exercise }}<br>
+            {% if risk_score.risk_factors.lifestyle.details.occupational_risk %}
+                <span class="badge bg-warning">Occupational COVID Exposure Risk</span>
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Recommendations -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0"><i class="bi bi-lightbulb"></i> Recommendations</h5>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-light">
+            {{ risk_score.recommendations|linebreaks }}
+        </div>
+    </div>
+</div>
+
+<!-- Actions -->
+<div class="mt-4">
+    <a href="{% url 'medical_records:medical_summary' patient.id %}" class="btn btn-primary">
+        <i class="bi bi-file-text"></i> View Medical Summary
+    </a>
+    <a href="{% url 'medical_records:calculate_risk_score' patient.id %}" class="btn btn-secondary">
+        <i class="bi bi-arrow-clockwise"></i> Recalculate Risk
+    </a>
+</div>
+{% endblock %}

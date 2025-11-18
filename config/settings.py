@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "accounts",
     "detection",
     "dashboards",
+    "medical_records",
     "reporting",
 ]
 
@@ -135,6 +136,8 @@ os.makedirs(MEDIA_ROOT / "xrays" / "processed", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "heatmaps", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "attention" / "large", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "attention" / "small", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "medical_records" / "documents", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "medical_records" / "vaccination_certificates", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "reports" / "pdf", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "reports" / "batch", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "signatures", exist_ok=True)

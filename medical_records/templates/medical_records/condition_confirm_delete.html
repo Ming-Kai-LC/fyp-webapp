@@ -1,0 +1,29 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Delete Medical Condition{% endblock %}
+
+{% block medical_content %}
+<div class="card">
+    <div class="card-header bg-danger text-white">
+        <h4><i class="bi bi-exclamation-triangle"></i> Confirm Deletion</h4>
+    </div>
+    <div class="card-body">
+        <p>Are you sure you want to delete the following medical condition?</p>
+        <div class="alert alert-light border">
+            <h5>{{ condition.condition_name }}</h5>
+            <p class="mb-0">Diagnosed: {{ condition.diagnosed_date|date:"M d, Y" }}</p>
+        </div>
+        <p class="text-danger"><strong>Warning:</strong> This action cannot be undone.</p>
+
+        <form method="post" class="d-inline">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">
+                <i class="bi bi-trash"></i> Yes, Delete
+            </button>
+            <a href="{% url 'medical_records:condition_list' %}" class="btn btn-secondary">
+                <i class="bi bi-x-circle"></i> Cancel
+            </a>
+        </form>
+    </div>
+</div>
+{% endblock %}

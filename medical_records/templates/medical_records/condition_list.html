@@ -1,0 +1,61 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Medical Conditions - Medical Records{% endblock %}
+
+{% block medical_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-clipboard2-pulse"></i> Medical Conditions</h2>
+    <a href="{% url 'medical_records:add_condition' %}" class="btn btn-primary">
+        <i class="bi bi-plus-circle"></i> Add Condition
+    </a>
+</div>
+
+{% if conditions %}
+    <div class="row">
+        {% for condition in conditions %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <h5 class="card-title">{{ condition.condition_name }}</h5>
+                            <div>
+                                <span class="badge bg-{{ condition.status }} me-1">{{ condition.get_status_display }}</span>
+                                <span class="badge severity-{{ condition.severity }}">{{ condition.get_severity_display }}</span>
+                            </div>
+                        </div>
+
+                        {% if condition.icd_code %}
+                            <p class="text-muted mb-2"><strong>ICD Code:</strong> {{ condition.icd_code }}</p>
+                        {% endif %}
+
+                        <p class="mb-2"><strong>Diagnosed:</strong> {{ condition.diagnosed_date|date:"M d, Y" }}</p>
+
+                        {% if condition.description %}
+                            <p class="mb-2">{{ condition.description|truncatewords:20 }}</p>
+                        {% endif %}
+
+                        {% if condition.increases_covid_risk %}
+                            <div class="alert alert-warning py-2 px-3 mb-2">
+                                <i class="bi bi-exclamation-triangle"></i> Increases COVID-19 risk
+                            </div>
+                        {% endif %}
+
+                        <div class="mt-3">
+                            <a href="{% url 'medical_records:edit_condition' condition.id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-pencil"></i> Edit
+                            </a>
+                            <a href="{% url 'medical_records:delete_condition' condition.id %}" class="btn btn-sm btn-outline-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No medical conditions recorded yet. Click "Add Condition" to get started.
+    </div>
+{% endif %}
+{% endblock %}

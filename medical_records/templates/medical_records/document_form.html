@@ -1,0 +1,29 @@
+{% extends 'medical_records/base_medical.html' %}
+{% load crispy_forms_tags %}
+
+{% block title %}Upload Medical Document{% endblock %}
+
+{% block medical_content %}
+<div class="card">
+    <div class="card-header">
+        <h4><i class="bi bi-cloud-upload"></i> Upload Medical Document</h4>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Supported formats: PDF, JPG, JPEG, PNG, DOC, DOCX
+        </div>
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form|crispy }}
+            <div class="mt-4">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-upload"></i> Upload
+                </button>
+                <a href="{% url 'medical_records:document_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

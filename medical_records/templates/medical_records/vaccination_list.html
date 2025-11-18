@@ -1,0 +1,76 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Vaccinations - Medical Records{% endblock %}
+
+{% block medical_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-shield-fill-check"></i> Vaccination Records</h2>
+    <a href="{% url 'medical_records:add_vaccination' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle"></i> Add Vaccination
+    </a>
+</div>
+
+<h4 class="mt-4 mb-3"><i class="bi bi-virus"></i> COVID-19 Vaccinations</h4>
+{% if covid_vaccinations %}
+    <div class="row">
+        {% for vacc in covid_vaccinations %}
+            <div class="col-md-6 mb-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <h5 class="card-title">
+                            {{ vacc.get_vaccine_name_display }}
+                            <span class="badge bg-primary">Dose {{ vacc.dose_number }}</span>
+                        </h5>
+                        {% if vacc.vaccine_brand %}
+                            <p class="mb-2"><strong>Brand:</strong> {{ vacc.vaccine_brand }}</p>
+                        {% endif %}
+                        <p class="mb-2"><strong>Date:</strong> {{ vacc.administered_date|date:"M d, Y" }}</p>
+                        {% if vacc.location %}
+                            <p class="mb-2"><strong>Location:</strong> {{ vacc.location }}</p>
+                        {% endif %}
+                        {% if vacc.adverse_reaction %}
+                            <div class="alert alert-warning py-2 px-3 mb-2">
+                                <i class="bi bi-exclamation-triangle"></i> Adverse reaction reported
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="alert alert-warning">
+        <i class="bi bi-exclamation-triangle"></i> No COVID-19 vaccinations recorded. COVID-19 vaccination is strongly recommended.
+    </div>
+{% endif %}
+
+<h4 class="mt-5 mb-3">Other Vaccinations</h4>
+{% if other_vaccinations %}
+    <div class="table-responsive">
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Vaccine</th>
+                    <th>Dose</th>
+                    <th>Date</th>
+                    <th>Location</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for vacc in other_vaccinations %}
+                    <tr>
+                        <td>{{ vacc.get_vaccine_name_display }}</td>
+                        <td>{{ vacc.dose_number }}</td>
+                        <td>{{ vacc.administered_date|date:"M d, Y" }}</td>
+                        <td>{{ vacc.location|default:"N/A" }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No other vaccinations recorded.
+    </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,55 @@
+{% extends 'medical_records/base_medical.html' %}
+
+{% block title %}Medical Documents - Medical Records{% endblock %}
+
+{% block medical_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="bi bi-file-earmark-medical"></i> Medical Documents</h2>
+    <a href="{% url 'medical_records:upload_document' %}" class="btn btn-primary">
+        <i class="bi bi-cloud-upload"></i> Upload Document
+    </a>
+</div>
+
+{% if documents %}
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Size</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for doc in documents %}
+                    <tr>
+                        <td>
+                            {% if doc.is_sensitive %}
+                                <i class="bi bi-lock-fill text-warning"></i>
+                            {% endif %}
+                            {{ doc.title }}
+                        </td>
+                        <td><span class="badge bg-info">{{ doc.get_document_type_display }}</span></td>
+                        <td>{{ doc.document_date|date:"M d, Y" }}</td>
+                        <td>{% if doc.file_size %}{{ doc.file_size|filesizeformat }}{% else %}N/A{% endif %}</td>
+                        <td>
+                            <a href="{% url 'medical_records:view_document' doc.document_id %}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            <a href="{% url 'medical_records:download_document' doc.document_id %}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-download"></i> Download
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="alert alert-info">
+        <i class="bi bi-info-circle"></i> No documents uploaded yet. Upload lab results, prescriptions, or other medical documents.
+    </div>
+{% endif %}
+{% endblock %}
