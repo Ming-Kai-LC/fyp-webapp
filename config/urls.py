@@ -21,6 +21,8 @@ urlpatterns = [
     path("register/", detection_views.register, name="register"),
     # Detection app URLs
     path("detection/", include("detection.urls")),
+    # Analytics module URLs
+    path("analytics/", include("analytics.urls")),
 ]
 
 # Serve media files in development

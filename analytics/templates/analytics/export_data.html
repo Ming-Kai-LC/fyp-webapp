@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Export Data - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="bi bi-download"></i> Export Data</h1>
+            <p class="text-muted">Export analytics data for research and analysis</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">Export Configuration</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="export_type" class="form-label">Export Type</label>
+                            <select name="export_type" id="export_type" class="form-select" required>
+                                <option value="predictions">Predictions Data</option>
+                                <option value="demographics">Demographics</option>
+                                <option value="full_dataset">Full Dataset</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="file_format" class="form-label">File Format</label>
+                            <select name="file_format" id="file_format" class="form-select" required>
+                                <option value="csv">CSV</option>
+                                <option value="xlsx">Excel (XLSX)</option>
+                                <option value="json">JSON</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="date_from" class="form-label">Date From</label>
+                            <input type="date" name="date_from" id="date_from" class="form-control">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="date_to" class="form-label">Date To</label>
+                            <input type="date" name="date_to" id="date_to" class="form-control">
+                        </div>
+
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="anonymize" id="anonymize" class="form-check-input">
+                            <label for="anonymize" class="form-check-label">Anonymize patient data</label>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-download"></i> Export Data
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Exports</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        {% for export in recent_exports %}
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ export.get_export_type_display }}</h6>
+                                    <small class="text-muted">{{ export.exported_at|date:"Y-m-d H:i" }} - {{ export.record_count }} records</small>
+                                </div>
+                                <span class="badge bg-secondary">{{ export.file_format|upper }}</span>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <p class="text-muted">No exports yet</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

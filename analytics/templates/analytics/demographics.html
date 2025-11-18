@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Demographic Analysis - Analytics{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1><i class="bi bi-people"></i> Demographic Analysis</h1>
+            <p class="text-muted">Patient demographics and insights</p>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <!-- Age Distribution -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Age Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="ageChart" style="height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gender Distribution -->
+        <div class="col-lg-6">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">Gender Distribution</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="genderChart" style="height: 300px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const demographicData = {{ demographic_json|safe }};
+
+    // Age Chart
+    const ageCtx = document.getElementById('ageChart').getContext('2d');
+    new Chart(ageCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(demographicData.by_age_group),
+            datasets: [{
+                label: 'Predictions',
+                data: Object.values(demographicData.by_age_group),
+                backgroundColor: 'rgba(13, 202, 240, 0.5)',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+
+    // Gender Chart
+    const genderCtx = document.getElementById('genderChart').getContext('2d');
+    new Chart(genderCtx, {
+        type: 'pie',
+        data: {
+            labels: Object.keys(demographicData.by_gender),
+            datasets: [{
+                data: Object.values(demographicData.by_gender),
+                backgroundColor: ['rgb(13, 110, 253)', 'rgb(220, 53, 69)', 'rgb(255, 193, 7)']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+        }
+    });
+</script>
+{% endblock %}
