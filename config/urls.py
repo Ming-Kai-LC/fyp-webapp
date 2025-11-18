@@ -27,6 +27,8 @@ urlpatterns = [
     path("reporting/", include("reporting.urls")),
     # Audit & Compliance URLs
     path("audit/", include("audit.urls")),
+    # Notifications URLs
+    path("notifications/", include("notifications.urls")),
 ]
 
 # Serve media files in development

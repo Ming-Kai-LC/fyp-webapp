@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     "medical_records",
     "reporting",
     "audit",
+    "notifications",
 ]
 
 MIDDLEWARE = [
@@ -292,6 +293,28 @@ ENABLE_CLAHE_PREPROCESSING = True
 SITE_URL = os.environ.get('SITE_URL', 'http://localhost:8000')  # Change in production
 REPORT_LOGO_PATH = BASE_DIR / 'static' / 'images' / 'hospital_logo.png'
 REPORT_SIGNATURE_PATH = MEDIA_ROOT / 'signatures'
+
+
+# ===========================================================================
+# NOTIFICATION SYSTEM SETTINGS
+# ===========================================================================
+
+# Email settings (for development - using console backend)
+# For production, configure SMTP settings
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # Development: prints to console
+# For production with Gmail:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', 'your-email@gmail.com')
+# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', 'your-app-password')
+DEFAULT_FROM_EMAIL = 'COVID-19 Detection System <noreply@covid19detection.local>'
+
+# SMS settings (Twilio) - Optional
+# TWILIO_ACCOUNT_SID = os.environ.get('TWILIO_ACCOUNT_SID', '')
+# TWILIO_AUTH_TOKEN = os.environ.get('TWILIO_AUTH_TOKEN', '')
+# TWILIO_PHONE_NUMBER = os.environ.get('TWILIO_PHONE_NUMBER', '')
 
 print(
     f"""
