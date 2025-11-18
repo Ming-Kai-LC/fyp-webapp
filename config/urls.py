@@ -8,6 +8,23 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from detection import views as detection_views
+from rest_framework import permissions
+from drf_yasg.views import get_schema_view
+from drf_yasg import openapi
+
+# Swagger documentation schema
+schema_view = get_schema_view(
+    openapi.Info(
+        title="COVID-19 Detection API",
+        default_version='v1',
+        description="RESTful API for COVID-19 Detection System using CrossViT and Multi-Model Ensemble",
+        terms_of_service="https://www.example.com/policies/terms/",
+        contact=openapi.Contact(email="contact@example.com"),
+        license=openapi.License(name="MIT License"),
+    ),
+    public=True,
+    permission_classes=(permissions.AllowAny,),
+)
 
 urlpatterns = [
     # Admin panel
@@ -35,6 +52,14 @@ urlpatterns = [
     path("analytics/", include("analytics.urls")),
     # Enhanced Dashboards URLs
     path("dashboards/", include("dashboards.urls")),
+
+    # ===== REST API =====
+    path("api/v1/", include("api.urls")),
+
+    # ===== API Documentation (Swagger/OpenAPI) =====
+    path("api/docs/", schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    path("api/redoc/", schema_view.with_ui('redoc', cache_timeout=0), name='schema-redoc'),
+    path("api/schema/", schema_view.without_ui(cache_timeout=0), name='schema-json'),
 ]
 
 # Serve media files in development
