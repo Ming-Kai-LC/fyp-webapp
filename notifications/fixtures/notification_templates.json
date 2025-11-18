@@ -1,0 +1,110 @@
+[
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 1,
+    "fields": {
+      "template_type": "prediction_ready",
+      "channel": "in_app",
+      "subject": "COVID-19 Test Results Ready",
+      "body_template": "Hello {patient_name},\n\nYour COVID-19 test results are ready. The diagnosis is: {diagnosis} with {confidence}% confidence.\n\nPlease click the link below to view your full results.\n\nThank you,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 2,
+    "fields": {
+      "template_type": "critical_result",
+      "channel": "email",
+      "subject": "URGENT: COVID-19 Positive Result",
+      "body_template": "URGENT NOTIFICATION\n\nDear {patient_name},\n\nYour COVID-19 test has returned a POSITIVE result with {confidence}% confidence.\n\nPlease take the following immediate actions:\n1. Self-isolate immediately\n2. Contact your healthcare provider\n3. Inform close contacts\n4. Monitor your symptoms\n\nView your detailed results here: {action_url}\n\nStay safe,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": true
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 3,
+    "fields": {
+      "template_type": "appointment_reminder",
+      "channel": "email",
+      "subject": "Appointment Reminder - {date}",
+      "body_template": "Hello {patient_name},\n\nThis is a reminder about your upcoming appointment:\n\nDate: {date}\nTime: {time}\nLocation: {location}\nDoctor: {doctor_name}\n\nPlease arrive 15 minutes early.\n\nIf you need to reschedule, please contact us as soon as possible.\n\nBest regards,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 4,
+    "fields": {
+      "template_type": "appointment_confirmed",
+      "channel": "in_app",
+      "subject": "Appointment Confirmed",
+      "body_template": "Hello {patient_name},\n\nYour appointment has been confirmed:\n\nDate: {date}\nTime: {time}\nDoctor: {doctor_name}\n\nWe look forward to seeing you.\n\nThank you,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 5,
+    "fields": {
+      "template_type": "report_ready",
+      "channel": "in_app",
+      "subject": "Medical Report Available",
+      "body_template": "Hello {patient_name},\n\nYour medical report is now available for download.\n\nReport Type: {report_type}\nGenerated: {generated_date}\n\nClick here to view: {action_url}\n\nThank you,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 6,
+    "fields": {
+      "template_type": "account_created",
+      "channel": "email",
+      "subject": "Welcome to COVID-19 Detection System",
+      "body_template": "Welcome {patient_name}!\n\nYour account has been successfully created.\n\nUsername: {username}\nEmail: {email}\n\nYou can now log in and access all features of the COVID-19 Detection System.\n\nIf you have any questions, please don't hesitate to contact us.\n\nBest regards,\nCOVID-19 Detection System Team",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 7,
+    "fields": {
+      "template_type": "password_reset",
+      "channel": "email",
+      "subject": "Password Reset Request",
+      "body_template": "Hello {patient_name},\n\nWe received a request to reset your password.\n\nIf you made this request, click the link below to reset your password:\n{reset_link}\n\nThis link will expire in 24 hours.\n\nIf you didn't request this, please ignore this email and your password will remain unchanged.\n\nStay safe,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 8,
+    "fields": {
+      "template_type": "test_result_updated",
+      "channel": "in_app",
+      "subject": "Test Results Updated",
+      "body_template": "Hello {patient_name},\n\nYour test results have been updated by {doctor_name}.\n\nUpdated: {updated_date}\nReason: {update_reason}\n\nPlease review your updated results: {action_url}\n\nThank you,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  },
+  {
+    "model": "notifications.notificationtemplate",
+    "pk": 9,
+    "fields": {
+      "template_type": "doctor_notes_added",
+      "channel": "in_app",
+      "subject": "Doctor's Notes Added to Your Case",
+      "body_template": "Hello {patient_name},\n\nDr. {doctor_name} has added notes to your case.\n\nAdded: {added_date}\n\nView the notes here: {action_url}\n\nIf you have questions about the notes, please contact your doctor.\n\nThank you,\nCOVID-19 Detection System",
+      "is_active": true,
+      "is_critical": false
+    }
+  }
+]

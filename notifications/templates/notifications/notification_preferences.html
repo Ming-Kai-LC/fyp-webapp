@@ -1,0 +1,249 @@
+{% extends 'base.html' %}
+
+{% block title %}Notification Preferences - COVID-19 Detection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .preference-section {
+        padding: 1.5rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .preference-section h5 {
+        color: var(--primary-color);
+        margin-bottom: 1rem;
+        font-weight: 600;
+    }
+
+    .form-check {
+        padding: 0.75rem;
+        background-color: white;
+        border-radius: 0.375rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.2s;
+    }
+
+    .form-check:hover {
+        background-color: #e9ecef;
+    }
+
+    .form-check-input:checked {
+        background-color: var(--primary-color);
+        border-color: var(--primary-color);
+    }
+
+    .info-box {
+        background-color: #e7f3ff;
+        border-left: 4px solid var(--primary-color);
+        padding: 1rem;
+        border-radius: 0.375rem;
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2><i class="bi bi-gear"></i> Notification Preferences</h2>
+            <a href="{% url 'notifications:notification_list' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Notifications
+            </a>
+        </div>
+
+        <div class="info-box">
+            <i class="bi bi-info-circle"></i>
+            <strong>Manage your notification settings</strong><br>
+            Control how and when you receive notifications about your COVID-19 test results and appointments.
+        </div>
+
+        <form method="post" action="{% url 'notifications:preferences' %}">
+            {% csrf_token %}
+
+            <!-- Channel Preferences -->
+            <div class="preference-section">
+                <h5><i class="bi bi-send"></i> Notification Channels</h5>
+                <p class="text-muted small">Choose how you want to receive notifications</p>
+
+                <div class="form-check">
+                    {{ form.email_enabled }}
+                    <label class="form-check-label" for="{{ form.email_enabled.id_for_label }}">
+                        <i class="bi bi-envelope"></i> Email Notifications
+                        <small class="text-muted d-block">Receive notifications via email</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.sms_enabled }}
+                    <label class="form-check-label" for="{{ form.sms_enabled.id_for_label }}">
+                        <i class="bi bi-phone"></i> SMS Notifications
+                        <small class="text-muted d-block">Receive critical alerts via text message</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.in_app_enabled }}
+                    <label class="form-check-label" for="{{ form.in_app_enabled.id_for_label }}">
+                        <i class="bi bi-app"></i> In-App Notifications
+                        <small class="text-muted d-block">Show notifications in the application</small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Contact Information -->
+            <div class="preference-section">
+                <h5><i class="bi bi-person-lines-fill"></i> Contact Information</h5>
+                <p class="text-muted small">Provide contact details for notifications</p>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.email_address.id_for_label }}" class="form-label">
+                            Email Address
+                        </label>
+                        {{ form.email_address }}
+                        {% if form.email_address.errors %}
+                            <div class="text-danger small">{{ form.email_address.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                            Phone Number
+                        </label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                            <div class="text-danger small">{{ form.phone_number.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notification Types -->
+            <div class="preference-section">
+                <h5><i class="bi bi-bell"></i> Notification Types</h5>
+                <p class="text-muted small">Select which types of notifications you want to receive</p>
+
+                <div class="form-check">
+                    {{ form.prediction_results }}
+                    <label class="form-check-label" for="{{ form.prediction_results.id_for_label }}">
+                        <i class="bi bi-file-medical"></i> Prediction Results
+                        <small class="text-muted d-block">Notify when COVID-19 test results are ready</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.appointment_reminders }}
+                    <label class="form-check-label" for="{{ form.appointment_reminders.id_for_label }}">
+                        <i class="bi bi-calendar-event"></i> Appointment Reminders
+                        <small class="text-muted d-block">Remind me about upcoming appointments</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.report_ready }}
+                    <label class="form-check-label" for="{{ form.report_ready.id_for_label }}">
+                        <i class="bi bi-file-earmark-text"></i> Reports Ready
+                        <small class="text-muted d-block">Notify when medical reports are available</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.doctor_notes }}
+                    <label class="form-check-label" for="{{ form.doctor_notes.id_for_label }}">
+                        <i class="bi bi-chat-left-text"></i> Doctor Notes
+                        <small class="text-muted d-block">Notify when doctor adds notes to your case</small>
+                    </label>
+                </div>
+
+                <div class="form-check">
+                    {{ form.system_updates }}
+                    <label class="form-check-label" for="{{ form.system_updates.id_for_label }}">
+                        <i class="bi bi-info-circle"></i> System Updates
+                        <small class="text-muted d-block">Receive system announcements and updates</small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Quiet Hours -->
+            <div class="preference-section">
+                <h5><i class="bi bi-moon"></i> Quiet Hours</h5>
+                <p class="text-muted small">Don't disturb me during these hours (critical notifications will still be sent)</p>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.quiet_hours_start.id_for_label }}" class="form-label">
+                            Start Time
+                        </label>
+                        {{ form.quiet_hours_start }}
+                        {% if form.quiet_hours_start.help_text %}
+                            <small class="text-muted d-block">{{ form.quiet_hours_start.help_text }}</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="{{ form.quiet_hours_end.id_for_label }}" class="form-label">
+                            End Time
+                        </label>
+                        {{ form.quiet_hours_end }}
+                        {% if form.quiet_hours_end.help_text %}
+                            <small class="text-muted d-block">{{ form.quiet_hours_end.help_text }}</small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Digest Preferences -->
+            <div class="preference-section">
+                <h5><i class="bi bi-collection"></i> Digest Options</h5>
+                <p class="text-muted small">Control how notifications are grouped</p>
+
+                <div class="form-check">
+                    {{ form.daily_digest }}
+                    <label class="form-check-label" for="{{ form.daily_digest.id_for_label }}">
+                        <i class="bi bi-calendar-day"></i> Daily Digest
+                        <small class="text-muted d-block">{{ form.daily_digest.help_text }}</small>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-check-circle"></i> Save Preferences
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.querySelector('form');
+        const emailCheckbox = document.getElementById('{{ form.email_enabled.id_for_label }}');
+        const smsCheckbox = document.getElementById('{{ form.sms_enabled.id_for_label }}');
+        const emailInput = document.getElementById('{{ form.email_address.id_for_label }}');
+        const phoneInput = document.getElementById('{{ form.phone_number.id_for_label }}');
+
+        // Show warning if email is enabled but no email address provided
+        form.addEventListener('submit', function(e) {
+            if (emailCheckbox.checked && !emailInput.value) {
+                if (!confirm('Email notifications are enabled but no email address is provided. Continue?')) {
+                    e.preventDefault();
+                    emailInput.focus();
+                }
+            }
+
+            if (smsCheckbox.checked && !phoneInput.value) {
+                if (!confirm('SMS notifications are enabled but no phone number is provided. Continue?')) {
+                    e.preventDefault();
+                    phoneInput.focus();
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}
