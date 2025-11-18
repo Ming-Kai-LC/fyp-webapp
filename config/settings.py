@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     "dashboards",
     "medical_records",
     "reporting",
+    "audit",
 ]
 
 MIDDLEWARE = [
@@ -47,6 +48,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "audit.middleware.AuditMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -141,6 +143,7 @@ os.makedirs(MEDIA_ROOT / "medical_records" / "vaccination_certificates", exist_o
 os.makedirs(MEDIA_ROOT / "reports" / "pdf", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "reports" / "batch", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "signatures", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "compliance_reports", exist_ok=True)
 
 
 # Default primary key field type

@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+
+{% block title %}My Access History - COVID-19 Detection System{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1 class="mb-4"><i class="bi bi-person-circle"></i> My Access History</h1>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">My Activity Logs</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Action</th>
+                            <th>Description</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in my_logs %}
+                        <tr>
+                            <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                            <td><span class="badge bg-info">{{ log.get_action_type_display }}</span></td>
+                            <td>{{ log.action_description }}</td>
+                            <td>
+                                {% if log.success %}
+                                    <span class="badge bg-success">Success</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center">No activity logs found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    {% if my_data_accesses %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Access to My Medical Data</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Accessed By</th>
+                            <th>Role</th>
+                            <th>Data Type</th>
+                            <th>Access Type</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for access in my_data_accesses %}
+                        <tr>
+                            <td>{{ access.accessed_at|date:"Y-m-d H:i:s" }}</td>
+                            <td>{{ access.accessor.username }}</td>
+                            <td><span class="badge bg-secondary">{{ access.accessor_role }}</span></td>
+                            <td>{{ access.data_type }}</td>
+                            <td><span class="badge bg-info">{{ access.get_access_type_display }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
