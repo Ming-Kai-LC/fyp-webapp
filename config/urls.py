@@ -31,6 +31,8 @@ urlpatterns = [
     path("notifications/", include("notifications.urls")),
     # Appointments URLs
     path("appointments/", include("appointments.urls")),
+    # Analytics URLs
+    path("analytics/", include("analytics.urls")),
 ]
 
 # Serve media files in development

@@ -98,6 +98,11 @@
                                     <i class="bi bi-cloud-upload"></i> Upload X-Ray
                                 </a>
                             </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'analytics:dashboard' %}">
+                                    <i class="bi bi-graph-up"></i> Analytics
+                                </a>
+                            </li>
                         {% elif user.profile.is_patient %}
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'detection:patient_dashboard' %}">

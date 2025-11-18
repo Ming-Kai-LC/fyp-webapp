@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     "audit",
     "notifications",
     "appointments",
+    "analytics",
 ]
 
 MIDDLEWARE = [
@@ -146,6 +147,7 @@ os.makedirs(MEDIA_ROOT / "reports" / "pdf", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "reports" / "batch", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "signatures", exist_ok=True)
 os.makedirs(MEDIA_ROOT / "compliance_reports", exist_ok=True)
+os.makedirs(MEDIA_ROOT / "analytics" / "exports", exist_ok=True)
 
 
 # Default primary key field type

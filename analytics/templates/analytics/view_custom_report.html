@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ report.name }} - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">{{ report.name }}</h1>
+            <p class="text-muted">{{ report.description }}</p>
+            <p>
+                <span class="badge bg-secondary">{{ report.get_report_type_display }}</span>
+                <span class="badge bg-info">{{ report.get_chart_type_display }}</span>
+                {% if report.is_public %}
+                <span class="badge bg-success">Public</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Report Data</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="reportChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-3">
+        <a href="{% url 'analytics:custom_reports' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Reports
+        </a>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    const reportData = {{ report_data_json|safe }};
+    const chartType = '{{ report.chart_type }}';
+
+    // Simple visualization based on report type
+    const ctx = document.getElementById('reportChart').getContext('2d');
+
+    let chartConfig = {
+        type: chartType === 'table' ? 'bar' : chartType,
+        data: {
+            labels: [],
+            datasets: []
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true
+        }
+    };
+
+    // Customize based on data structure
+    if (reportData.dates) {
+        chartConfig.data.labels = reportData.dates;
+        chartConfig.data.datasets = [{
+            label: 'Values',
+            data: reportData.total_predictions || [],
+            borderColor: '#0d6efd',
+            backgroundColor: 'rgba(13, 110, 253, 0.1)'
+        }];
+    }
+
+    new Chart(ctx, chartConfig);
+</script>
+{% endblock %}

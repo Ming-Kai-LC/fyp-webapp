@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}Custom Reports - Analytics{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-12">
+            <h1 class="h2">
+                <i class="bi bi-file-earmark-text"></i> Custom Reports
+            </h1>
+            <p class="text-muted">Create and manage custom analytics reports</p>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <a href="{% url 'analytics:create_custom_report' %}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> Create New Report
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <h4>Your Reports</h4>
+            <div class="list-group mb-4">
+                {% for report in user_reports %}
+                <a href="{% url 'analytics:view_custom_report' report.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ report.name }}</h5>
+                        <small>{{ report.created_at|date:"Y-m-d" }}</small>
+                    </div>
+                    <p class="mb-1">{{ report.description|truncatewords:15 }}</p>
+                    <small class="text-muted">
+                        <span class="badge bg-secondary">{{ report.get_report_type_display }}</span>
+                        <span class="badge bg-info">{{ report.get_chart_type_display }}</span>
+                    </small>
+                </a>
+                {% empty %}
+                <p class="text-muted">No reports created yet.</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <h4>Public Reports</h4>
+            <div class="list-group">
+                {% for report in public_reports %}
+                <a href="{% url 'analytics:view_custom_report' report.id %}" class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between">
+                        <h5 class="mb-1">{{ report.name }}</h5>
+                        <small>{{ report.created_at|date:"Y-m-d" }}</small>
+                    </div>
+                    <p class="mb-1">{{ report.description|truncatewords:15 }}</p>
+                    <small class="text-muted">
+                        By {{ report.created_by.get_full_name|default:report.created_by.username }}
+                    </small>
+                </a>
+                {% empty %}
+                <p class="text-muted">No public reports available.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center mt-4">
+        <a href="{% url 'analytics:dashboard' %}" class="btn btn-secondary">
+            <i class="bi bi-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}
