@@ -13,6 +13,7 @@ class NotificationTemplate(models.Model):
         ('critical_result', 'Critical Result - COVID Positive'),
         ('appointment_reminder', 'Appointment Reminder'),
         ('appointment_confirmed', 'Appointment Confirmed'),
+        ('appointment_cancelled', 'Appointment Cancelled'),
         ('report_ready', 'Report Ready'),
         ('account_created', 'Account Created'),
         ('password_reset', 'Password Reset'),

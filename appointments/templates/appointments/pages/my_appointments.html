@@ -1,0 +1,137 @@
+{% extends 'appointments/base.html' %}
+
+{% block page_title %}My Appointments{% endblock %}
+{% block appointments_title %}My Appointments{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">View and manage your appointments.</p>
+{% endblock %}
+
+{% block appointments_content %}
+<div class="row mb-4">
+    <div class="col-md-6">
+        <a href="{% url 'appointments:book_appointment' %}" class="btn btn-primary">
+            <i class="bi bi-calendar-plus"></i> Book New Appointment
+        </a>
+        <a href="{% url 'appointments:join_waitlist' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history"></i> Join Waitlist
+        </a>
+    </div>
+    <div class="col-md-6 text-end">
+        <div class="btn-group" role="group">
+            <a href="?status=all" class="btn btn-sm {% if status_filter == 'all' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                All
+            </a>
+            <a href="?status=scheduled" class="btn btn-sm {% if status_filter == 'scheduled' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Scheduled
+            </a>
+            <a href="?status=confirmed" class="btn btn-sm {% if status_filter == 'confirmed' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Confirmed
+            </a>
+            <a href="?status=completed" class="btn btn-sm {% if status_filter == 'completed' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                Completed
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Upcoming Appointments -->
+<div class="mb-5">
+    <h4 class="mb-3"><i class="bi bi-calendar-event"></i> Upcoming Appointments</h4>
+
+    {% if upcoming_appointments %}
+        {% for appointment in upcoming_appointments %}
+            {% include 'appointments/components/appointment_card.html' with appointment=appointment %}
+        {% endfor %}
+
+        {% if upcoming_appointments.has_other_pages %}
+        <nav aria-label="Upcoming appointments pagination">
+            <ul class="pagination justify-content-center">
+                {% if upcoming_appointments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?upcoming_page=1&status={{ status_filter }}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?upcoming_page={{ upcoming_appointments.previous_page_number }}&status={{ status_filter }}">Previous</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ upcoming_appointments.number }} of {{ upcoming_appointments.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if upcoming_appointments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?upcoming_page={{ upcoming_appointments.next_page_number }}&status={{ status_filter }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?upcoming_page={{ upcoming_appointments.paginator.num_pages }}&status={{ status_filter }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-5">
+                <i class="bi bi-calendar-x display-1 text-muted"></i>
+                <h5 class="mt-3">No Upcoming Appointments</h5>
+                <p class="text-muted">You don't have any upcoming appointments scheduled.</p>
+                <a href="{% url 'appointments:book_appointment' %}" class="btn btn-primary">
+                    <i class="bi bi-calendar-plus"></i> Book Your First Appointment
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Past Appointments -->
+<div class="mb-5">
+    <h4 class="mb-3"><i class="bi bi-clock-history"></i> Past Appointments</h4>
+
+    {% if past_appointments %}
+        {% for appointment in past_appointments %}
+            {% include 'appointments/components/appointment_card.html' with appointment=appointment %}
+        {% endfor %}
+
+        {% if past_appointments.has_other_pages %}
+        <nav aria-label="Past appointments pagination">
+            <ul class="pagination justify-content-center">
+                {% if past_appointments.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?past_page=1&status={{ status_filter }}">First</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?past_page={{ past_appointments.previous_page_number }}&status={{ status_filter }}">Previous</a>
+                </li>
+                {% endif %}
+
+                <li class="page-item active">
+                    <span class="page-link">
+                        Page {{ past_appointments.number }} of {{ past_appointments.paginator.num_pages }}
+                    </span>
+                </li>
+
+                {% if past_appointments.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?past_page={{ past_appointments.next_page_number }}&status={{ status_filter }}">Next</a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?past_page={{ past_appointments.paginator.num_pages }}&status={{ status_filter }}">Last</a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+        {% endif %}
+    {% else %}
+        <div class="card">
+            <div class="card-body text-center py-4">
+                <i class="bi bi-inbox display-4 text-muted"></i>
+                <p class="text-muted mt-2 mb-0">No past appointments to display.</p>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

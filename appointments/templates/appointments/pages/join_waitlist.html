@@ -1,0 +1,52 @@
+{% extends 'appointments/base.html' %}
+{% load crispy_forms_tags %}
+
+{% block page_title %}Join Waitlist{% endblock %}
+{% block appointments_title %}Join Appointment Waitlist{% endblock %}
+
+{% block page_description %}
+<p class="text-muted">Join the waitlist to be notified when appointment slots become available.</p>
+{% endblock %}
+
+{% block appointments_content %}
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="bi bi-clock-history"></i> Waitlist Request</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+
+                    <div class="mt-4">
+                        <button type="submit" class="btn btn-warning btn-lg">
+                            <i class="bi bi-check-circle"></i> Join Waitlist
+                        </button>
+                        <a href="{% url 'appointments:my_appointments' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0"><i class="bi bi-info-circle"></i> How It Works</h6>
+            </div>
+            <div class="card-body">
+                <ol class="mb-0">
+                    <li class="mb-2">Submit your preferred date and time range</li>
+                    <li class="mb-2">We'll monitor for available slots</li>
+                    <li class="mb-2">You'll receive a notification when a slot opens</li>
+                    <li class="mb-0">Book your appointment before it's taken</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
