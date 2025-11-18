@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Security Alerts - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-shield-exclamation"></i> Security Alerts Dashboard
+            </h2>
+
+            <!-- Alert Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Critical Alerts</h5>
+                            <h2>{{ critical_alerts.count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning text-dark">
+                        <div class="card-body">
+                            <h5 class="card-title">Unacknowledged Alerts</h5>
+                            <h2>{{ unacknowledged_alerts.count }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-info text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Recent Alerts (7 days)</h5>
+                            <h2>{{ recent_alerts.count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unacknowledged Alerts -->
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">Unacknowledged Alerts</h5>
+                </div>
+                <div class="card-body">
+                    {% if unacknowledged_alerts %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Triggered At</th>
+                                    <th>Type</th>
+                                    <th>Severity</th>
+                                    <th>Description</th>
+                                    <th>User</th>
+                                    <th>IP Address</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in unacknowledged_alerts %}
+                                <tr>
+                                    <td>{{ alert.triggered_at|date:"Y-m-d H:i" }}</td>
+                                    <td>{{ alert.get_alert_type_display }}</td>
+                                    <td>
+                                        {% if alert.severity == 'critical' %}
+                                        <span class="badge bg-danger">Critical</span>
+                                        {% elif alert.severity == 'high' %}
+                                        <span class="badge bg-warning">High</span>
+                                        {% elif alert.severity == 'medium' %}
+                                        <span class="badge bg-info">Medium</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">Low</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ alert.description }}</td>
+                                    <td>{{ alert.user.username|default:"N/A" }}</td>
+                                    <td>{{ alert.ip_address|default:"N/A" }}</td>
+                                    <td>
+                                        <a href="{% url 'audit:acknowledge_alert' alert.id %}" class="btn btn-sm btn-primary">
+                                            Acknowledge
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <p class="text-center mb-0">No unacknowledged alerts.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Alert Statistics by Type -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Alert Statistics</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Alert Type</th>
+                                    <th>Count</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in alert_stats %}
+                                <tr>
+                                    <td>{{ stat.alert_type }}</td>
+                                    <td>{{ stat.count }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="2" class="text-center">No alert statistics available.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

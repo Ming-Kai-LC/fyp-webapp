@@ -1,0 +1,70 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Compliance Report - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-file-earmark-bar-graph"></i> {{ report.get_report_type_display }}
+                    </h3>
+                    <p class="mb-0 text-muted">
+                        Generated on {{ report.generated_at|date:"Y-m-d H:i:s" }} by {{ report.generated_by.username }}
+                    </p>
+                    <p class="mb-0 text-muted">
+                        Period: {{ report.start_date|date:"Y-m-d" }} to {{ report.end_date|date:"Y-m-d" }}
+                    </p>
+                </div>
+                <div class="card-body">
+                    <!-- Summary Section -->
+                    <h4>Summary</h4>
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered">
+                            <tbody>
+                                {% for key, value in report.summary.items %}
+                                <tr>
+                                    <th style="width: 40%;">{{ key|title }}</th>
+                                    <td>{{ value }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Details Section -->
+                    <h4>Detailed Findings</h4>
+                    <div class="accordion" id="reportDetails">
+                        {% for key, value in report.details.items %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}">
+                                    {{ key|title }}
+                                </button>
+                            </h2>
+                            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" data-bs-parent="#reportDetails">
+                                <div class="accordion-body">
+                                    <pre>{{ value|pprint }}</pre>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="mt-4">
+                        <a href="{% url 'audit:generate_compliance_report' %}" class="btn btn-primary">
+                            Generate New Report
+                        </a>
+                        <a href="{% url 'audit:audit_log_list' %}" class="btn btn-secondary">
+                            Back to Audit Logs
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

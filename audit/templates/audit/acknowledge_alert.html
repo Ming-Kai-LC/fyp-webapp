@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Acknowledge Alert - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-warning">
+                    <h3 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Acknowledge Security Alert
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <h5>Alert Details</h5>
+                    <table class="table table-bordered">
+                        <tr>
+                            <th style="width: 30%;">Type</th>
+                            <td>{{ alert.get_alert_type_display }}</td>
+                        </tr>
+                        <tr>
+                            <th>Severity</th>
+                            <td>
+                                {% if alert.severity == 'critical' %}
+                                <span class="badge bg-danger">Critical</span>
+                                {% elif alert.severity == 'high' %}
+                                <span class="badge bg-warning">High</span>
+                                {% elif alert.severity == 'medium' %}
+                                <span class="badge bg-info">Medium</span>
+                                {% else %}
+                                <span class="badge bg-secondary">Low</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Triggered At</th>
+                            <td>{{ alert.triggered_at|date:"Y-m-d H:i:s" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Description</th>
+                            <td>{{ alert.description }}</td>
+                        </tr>
+                        <tr>
+                            <th>User</th>
+                            <td>{{ alert.user.username|default:"N/A" }}</td>
+                        </tr>
+                        <tr>
+                            <th>IP Address</th>
+                            <td>{{ alert.ip_address|default:"N/A" }}</td>
+                        </tr>
+                    </table>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="resolution_notes" class="form-label">Resolution Notes</label>
+                            <textarea name="resolution_notes" id="resolution_notes" class="form-control" rows="4" required></textarea>
+                        </div>
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'audit:security_alerts_dashboard' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">Acknowledge Alert</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

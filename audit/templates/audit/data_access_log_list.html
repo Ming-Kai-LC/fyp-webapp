@@ -1,0 +1,99 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Data Access Logs - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-shield-check"></i> Patient Data Access Logs (HIPAA Compliance)
+            </h2>
+
+            <!-- Filter Controls -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label">Patient ID</label>
+                            <input type="text" name="patient_id" class="form-control" value="{{ patient_id }}" placeholder="Enter patient ID">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date From</label>
+                            <input type="datetime-local" name="date_from" class="form-control" value="{{ date_from }}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Date To</label>
+                            <input type="datetime-local" name="date_to" class="form-control" value="{{ date_to }}">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <div class="form-check">
+                                <input type="checkbox" name="flagged_only" class="form-check-input" id="flagged_only" {% if flagged_only %}checked{% endif %}>
+                                <label class="form-check-label" for="flagged_only">
+                                    Flagged Only
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary">Apply Filters</button>
+                            <a href="{% url 'audit:data_access_log_list' %}" class="btn btn-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Data Access Logs Table -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Accessed At</th>
+                                    <th>Accessor</th>
+                                    <th>Role</th>
+                                    <th>Patient</th>
+                                    <th>Data Type</th>
+                                    <th>Access Type</th>
+                                    <th>IP Address</th>
+                                    <th>Flagged</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr {% if log.flagged_for_review %}class="table-warning"{% endif %}>
+                                    <td>{{ log.accessed_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ log.accessor.username }}</td>
+                                    <td>{{ log.accessor_role }}</td>
+                                    <td>{{ log.patient.user.get_full_name }}</td>
+                                    <td>{{ log.data_type }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ log.get_access_type_display }}</span>
+                                    </td>
+                                    <td>{{ log.ip_address|default:"N/A" }}</td>
+                                    <td>
+                                        {% if log.flagged_for_review %}
+                                        <span class="badge bg-warning">Flagged</span>
+                                        {% else %}
+                                        <span class="badge bg-success">Normal</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center">No data access logs found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

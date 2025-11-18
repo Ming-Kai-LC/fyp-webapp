@@ -1,0 +1,94 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Access History - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-clock-history"></i> My Access History
+            </h2>
+
+            <!-- My Actions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">My Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Action</th>
+                                    <th>Description</th>
+                                    <th>IP Address</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in my_logs %}
+                                <tr>
+                                    <td>{{ log.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ log.get_action_type_display }}</span>
+                                    </td>
+                                    <td>{{ log.action_description }}</td>
+                                    <td>{{ log.ip_address|default:"N/A" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No activity found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Data Access (for patients) -->
+            {% if my_data_accesses %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">Who Accessed My Medical Data</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Accessed At</th>
+                                    <th>Accessed By</th>
+                                    <th>Role</th>
+                                    <th>Data Type</th>
+                                    <th>Access Type</th>
+                                    <th>Reason</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for access in my_data_accesses %}
+                                <tr>
+                                    <td>{{ access.accessed_at|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ access.accessor.username }}</td>
+                                    <td>{{ access.accessor_role }}</td>
+                                    <td>{{ access.data_type }}</td>
+                                    <td>{{ access.get_access_type_display }}</td>
+                                    <td>{{ access.access_reason|default:"N/A" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No data access logs found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

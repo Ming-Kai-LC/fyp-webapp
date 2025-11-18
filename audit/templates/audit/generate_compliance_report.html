@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Generate Compliance Report - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">
+                        <i class="bi bi-file-earmark-bar-graph"></i> Generate Compliance Report
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <div class="mb-3">
+                            {{ form.report_type.label_tag }}
+                            {{ form.report_type }}
+                            {% if form.report_type.errors %}
+                            <div class="text-danger">{{ form.report_type.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.start_date.label_tag }}
+                            {{ form.start_date }}
+                            {% if form.start_date.errors %}
+                            <div class="text-danger">{{ form.start_date.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.end_date.label_tag }}
+                            {{ form.end_date }}
+                            {% if form.end_date.errors %}
+                            <div class="text-danger">{{ form.end_date.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        {% if form.non_field_errors %}
+                        <div class="alert alert-danger">
+                            {{ form.non_field_errors }}
+                        </div>
+                        {% endif %}
+
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{% url 'audit:audit_log_list' %}" class="btn btn-secondary">Cancel</a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-file-earmark-plus"></i> Generate Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info Card -->
+            <div class="card mt-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">Report Types</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li><strong>HIPAA Audit Report:</strong> Patient data access compliance</li>
+                        <li><strong>GDPR Compliance Report:</strong> Data privacy and protection compliance</li>
+                        <li><strong>Data Access Review:</strong> Detailed analysis of data access patterns</li>
+                        <li><strong>Security Audit:</strong> Security incidents and login attempts</li>
+                        <li><strong>User Activity Report:</strong> User actions and system usage</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

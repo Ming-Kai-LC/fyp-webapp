@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Login Attempts - {{ block.super }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">
+                <i class="bi bi-door-open"></i> Login Attempts
+            </h2>
+
+            <!-- Statistics -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card">
+                        <div class="card-body">
+                            <h5 class="card-title">Total Attempts</h5>
+                            <h2>{{ total_attempts }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-danger text-white">
+                        <div class="card-body">
+                            <h5 class="card-title">Failed Attempts</h5>
+                            <h2>{{ failed_attempts }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card bg-warning">
+                        <div class="card-body">
+                            <h5 class="card-title">Suspicious Attempts</h5>
+                            <h2>{{ suspicious_attempts }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter Controls -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="get">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="failed_only" class="form-check-input" id="failed_only" {% if request.GET.failed_only %}checked{% endif %}>
+                                    <label class="form-check-label" for="failed_only">Failed Only</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="suspicious_only" class="form-check-input" id="suspicious_only" {% if request.GET.suspicious_only %}checked{% endif %}>
+                                    <label class="form-check-label" for="suspicious_only">Suspicious Only</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-check">
+                                    <input type="checkbox" name="recent" class="form-check-input" id="recent" {% if request.GET.recent %}checked{% endif %}>
+                                    <label class="form-check-label" for="recent">Last 24 Hours</label>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-primary">Apply</button>
+                                <a href="{% url 'audit:login_attempts_list' %}" class="btn btn-secondary">Clear</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Login Attempts Table -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Login Attempts</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp</th>
+                                    <th>Username</th>
+                                    <th>Status</th>
+                                    <th>IP Address</th>
+                                    <th>Failure Reason</th>
+                                    <th>Suspicious</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attempt in attempts %}
+                                <tr {% if attempt.is_suspicious %}class="table-warning"{% endif %}>
+                                    <td>{{ attempt.timestamp|date:"Y-m-d H:i:s" }}</td>
+                                    <td>{{ attempt.username }}</td>
+                                    <td>
+                                        {% if attempt.success %}
+                                        <span class="badge bg-success">Success</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Failed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ attempt.ip_address }}</td>
+                                    <td>{{ attempt.failure_reason|default:"N/A" }}</td>
+                                    <td>
+                                        {% if attempt.is_suspicious %}
+                                        <i class="bi bi-exclamation-triangle text-warning"></i>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center">No login attempts found.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Top Failed Usernames -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top Failed Usernames</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Username</th>
+                                        <th>Failed Attempts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in top_failed %}
+                                    <tr>
+                                        <td>{{ item.username }}</td>
+                                        <td>{{ item.count }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="text-center">No data</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">Top IPs with Failed Attempts</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>IP Address</th>
+                                        <th>Failed Attempts</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for item in top_ips %}
+                                    <tr>
+                                        <td>{{ item.ip_address }}</td>
+                                        <td>{{ item.count }}</td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="text-center">No data</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
