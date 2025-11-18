@@ -281,7 +281,7 @@ def my_access_history(request):
     """
     if not hasattr(request.user, 'profile'):
         messages.error(request, "Profile not found.")
-        return redirect('detection:home')
+        return redirect('home')
 
     # Get user's own audit logs
     my_logs = AuditLog.objects.filter(user=request.user).order_by('-timestamp')[:100]

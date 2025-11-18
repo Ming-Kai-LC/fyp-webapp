@@ -118,5 +118,5 @@ def get_client_ip(request):
     if x_forwarded_for:
         ip = x_forwarded_for.split(',')[0]
     else:
-        ip = request.META.get('REMOTE_ADDR')
-    return ip
+        ip = request.META.get('REMOTE_ADDR', '127.0.0.1')  # Default to localhost for tests
+    return ip if ip else '127.0.0.1'  # Ensure we never return None

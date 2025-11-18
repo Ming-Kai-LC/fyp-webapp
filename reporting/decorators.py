@@ -11,7 +11,7 @@ def doctor_required(view_func):
     def wrapper(request, *args, **kwargs):
         if not hasattr(request.user, 'profile'):
             messages.error(request, "You don't have permission to access this page.")
-            return redirect('detection:home')
+            return redirect('home')
 
         if not (request.user.profile.is_doctor() or request.user.profile.is_admin()):
             messages.error(request, "Only doctors can access this page.")

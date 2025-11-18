@@ -81,7 +81,7 @@ def enhanced_patient_dashboard(request):
     """
     if not hasattr(request.user, 'patient_info'):
         # Redirect to create patient profile
-        return redirect('detection:home')
+        return redirect('home')
 
     patient = request.user.patient_info
 
@@ -133,7 +133,7 @@ def enhanced_admin_dashboard(request):
     Enhanced admin dashboard with system monitoring
     """
     if not hasattr(request.user, 'profile') or not request.user.profile.is_admin():
-        return redirect('detection:home')
+        return redirect('home')
 
     # System health
     from django.db import connection
