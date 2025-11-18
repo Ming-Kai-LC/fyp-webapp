@@ -1,4 +1,7 @@
-# UI/UX Consistency Skill
+---
+name: UI/UX Consistency
+description: Enforces consistent UI/UX design system across all modules using Bootstrap 5. Auto-applies design patterns, color schemes, and component styles for COVID-19 Detection webapp.
+---
 
 Maintains consistent design language, patterns, and user experience throughout the application.
 

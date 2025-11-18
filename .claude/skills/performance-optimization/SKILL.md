@@ -1,4 +1,7 @@
-# Performance Optimization Skill
+---
+name: Performance Optimization
+description: Optimizes database queries, ML inference for RTX 4060 8GB VRAM, and caching strategies. Auto-applies N+1 prevention, select_related/prefetch_related, and memory management.
+---
 
 Ensures optimal performance for the COVID-19 Detection webapp, especially for ML inference on RTX 4060 8GB.
 

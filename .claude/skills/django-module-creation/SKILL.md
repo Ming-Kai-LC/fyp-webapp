@@ -1,4 +1,7 @@
-# Django Module Creation Best Practices
+---
+name: Django Module Creation
+description: Ensures Django best practices for creating modules using OOP, service layer pattern, type hints, and fat models/thin views. Auto-applies when creating new Django apps or features.
+---
 
 Ensures all Django components follow industry standards, are reusable, and maintainable using Object-Oriented principles.
 

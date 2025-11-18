@@ -1,4 +1,7 @@
-# Security Best Practices Skill
+---
+name: Security Best Practices
+description: Enforces OWASP Top 10 security standards and healthcare-grade security for medical applications. Auto-applies input validation, authentication, and data protection patterns.
+---
 
 Ensures all code follows industry-standard security practices for healthcare/medical applications.
 

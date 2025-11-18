@@ -1,4 +1,7 @@
-# Code Quality & Testing Standards
+---
+name: Code Quality Standards
+description: Maintains PEP 8 compliance, type hints, docstrings, and 80%+ test coverage. Auto-applies code quality standards, testing patterns, and documentation requirements.
+---
 
 Maintains high code quality, readability, and test coverage throughout the project.
 

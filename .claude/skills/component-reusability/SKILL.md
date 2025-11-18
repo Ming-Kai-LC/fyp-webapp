@@ -1,4 +1,7 @@
-# Component Reusability Skill
+---
+name: Component Reusability
+description: Ensures maximum code reuse through template components, view mixins, and abstract models. Auto-applies DRY principles and creates reusable Django patterns.
+---
 
 Ensures maximum code reuse through Django's template system, mixins, and object-oriented design.
 

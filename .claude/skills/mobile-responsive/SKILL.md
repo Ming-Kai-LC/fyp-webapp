@@ -1,6 +1,11 @@
-# Mobile-Responsive Design Skill
+---
+name: Mobile-Responsive Design
+description: Ensures all UI components are mobile-first and responsive across all devices using Bootstrap 5. Auto-applies responsive design patterns when creating templates, forms, dashboards, and navigation.
+---
 
-Ensures all UI components are mobile-first and responsive across all devices.
+# Mobile-Responsive Design
+
+Ensures all UI components are mobile-first and responsive across all devices for the COVID-19 Detection webapp.
 
 ## Core Principles
 
