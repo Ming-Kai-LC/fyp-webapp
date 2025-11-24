@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% load common_tags %}  {# ✅ FOUNDATION: Load template tags #}
+
+{% block title %}Announcements{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="mb-3">System Announcements</h1>
+            <p class="text-muted">Total: {{ total_count }} active announcements</p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if user.profile.is_staff_or_admin %}
+                <a href="{% url 'announcements:announcement_create' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle"></i> Create Announcement
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# ✅ FOUNDATION: Use alert component for messages #}
+    {% if messages %}
+        {% for message in messages %}
+            {% include 'components/alert.html' with message=message type=message.tags dismissible=True %}
+        {% endfor %}
+    {% endif %}
+
+    {# ✅ FOUNDATION: Use card component for announcements #}
+    {% for announcement in announcements %}
+        {% include 'components/card.html' with title=announcement.title %}
+            {% block card_body %}
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        {# ✅ FOUNDATION: Use status_badge template tag #}
+                        {% status_badge announcement.priority %}
+
+                        {# Show active badge #}
+                        {% if announcement.is_active %}
+                            <span class="badge bg-success ms-2">Active</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-muted small">
+                        {# ✅ FOUNDATION: Use format_datetime template tag #}
+                        Posted: {% format_datetime announcement.created_at %}
+                    </div>
+                </div>
+
+                <p class="card-text">{{ announcement.message|truncatewords:30 }}</p>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        By: {{ announcement.author.get_full_name|default:announcement.author.username }}
+                        {% if announcement.expires_at %}
+                            <br>Expires: {% format_datetime announcement.expires_at %}
+                        {% endif %}
+                    </small>
+
+                    <div>
+                        <a href="{% url 'announcements:announcement_detail' announcement.pk %}" class="btn btn-sm btn-primary">
+                            View Details
+                        </a>
+                        {% if user.profile.is_staff_or_admin %}
+                            <a href="{% url 'announcements:announcement_update' announcement.pk %}" class="btn btn-sm btn-secondary">
+                                Edit
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endblock %}
+        {% endinclude %}
+    {% empty %}
+        {# ✅ FOUNDATION: Use alert component for empty state #}
+        {% include 'components/alert.html' with message="No announcements at this time." type="info" %}
+    {% endfor %}
+
+    {# ✅ FOUNDATION: Use render_pagination template tag #}
+    {% if page_obj.has_other_pages %}
+        <div class="mt-4">
+            {% render_pagination page_obj %}
+        </div>
+    {% endif %}
+</div>
+
+{#
+✅ FOUNDATION COMPONENTS DEMONSTRATED:
+1. {% load common_tags %} - Template tags loaded
+2. {% include 'components/alert.html' %} - Alert component for messages
+3. {% include 'components/card.html' %} - Card component for announcements
+4. {% status_badge %} - Status badge template tag
+5. {% format_datetime %} - DateTime formatting tag
+6. {% render_pagination %} - Pagination component
+
+Result: Clean, consistent UI with zero hardcoded HTML for common patterns!
+#}
+{% endblock %}

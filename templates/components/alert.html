@@ -1,0 +1,24 @@
+{% comment %}
+Reusable alert component.
+
+Usage:
+    {% include 'components/alert.html' with message="Success!" type="success" dismissible=True %}
+
+Parameters:
+    - message: Alert message text (required)
+    - type: Alert type - 'success', 'danger', 'warning', 'info', 'primary' (default: 'info')
+    - dismissible: Whether to show close button (default: False)
+    - icon: Bootstrap icon name (optional)
+{% endcomment %}
+
+{% if message %}
+<div class="alert alert-{{ type|default:'info' }}{% if dismissible %} alert-dismissible fade show{% endif %}" role="alert">
+    {% if icon %}
+        <i class="bi bi-{{ icon }} me-2"></i>
+    {% endif %}
+    {{ message }}
+    {% if dismissible %}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    {% endif %}
+</div>
+{% endif %}

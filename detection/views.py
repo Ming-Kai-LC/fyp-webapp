@@ -7,6 +7,7 @@ Handles all user interactions and ML predictions
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
+from django.contrib.auth.views import LoginView
 from django.contrib import messages
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -20,9 +21,17 @@ from .forms import (
     PatientProfileForm,
     DoctorNotesForm,
 )
-from .ml_engine_stub import model_ensemble
-from .preprocessing_stub import apply_clahe
-from .explainability_stub import generate_explainability_report
+from .services import PredictionService, StatisticsService, MLInferenceError
+try:
+    # Try to import real ML engine if PyTorch is available
+    from .ml_engine import model_ensemble
+    from .preprocessing import apply_clahe
+    from .explainability import generate_explainability_report
+except ImportError:
+    # Fall back to stub if PyTorch not installed or model weights missing
+    from .ml_engine_stub import model_ensemble
+    from .preprocessing_stub import apply_clahe
+    from .explainability_stub import generate_explainability_report
 from notifications.services import NotificationService
 
 import os
@@ -45,94 +54,123 @@ def home(request):
 
 
 def register(request):
-    """User registration"""
+    """
+    Patient self-registration for public access.
+
+    Security Policy (user-role-permissions skill):
+    - Public registration creates PATIENT accounts ONLY
+    - Staff/Admin accounts must be created through admin panel
+    - Role is hardcoded to 'patient' - no user input accepted
+    - Patient profile automatically created for all registrations
+    """
     if request.method == "POST":
         form = UserRegistrationForm(request.POST)
         if form.is_valid():
+            # Create user account
             user = form.save()
 
-            # Set user profile role
+            # SECURITY: Enforce patient role (defense in depth)
+            # Profile is auto-created via signal with role='patient'
+            # Explicitly set to 'patient' to prevent any bypass attempts
             profile = user.profile
-            profile.role = form.cleaned_data.get("role")
+            profile.role = "patient"  # ALWAYS patient for public registration
             profile.save()
 
-            # If patient, create patient profile
-            if profile.role == "patient":
-                Patient.objects.create(
-                    user=user, age=18, gender="O"  # Default, can be updated later
-                )
-
-            login(request, user)
-            messages.success(
-                request, f"Welcome {user.username}! Your account has been created."
+            # Create patient medical profile with defaults
+            # User can update their profile after login
+            Patient.objects.create(
+                user=user,
+                age=18,  # Default age, to be updated by user
+                gender="O"  # Default gender, to be updated by user
             )
 
-            # Redirect based on role
-            if profile.role == "doctor":
-                return redirect("detection:doctor_dashboard")
-            elif profile.role == "patient":
-                return redirect("detection:patient_dashboard")
-            else:
-                return redirect("home")
+            # Log user in automatically
+            login(request, user)
+            messages.success(
+                request,
+                f"Welcome {user.username}! Your patient account has been created successfully."
+            )
+
+            # Redirect to patient dashboard
+            return redirect("detection:patient_dashboard")
     else:
         form = UserRegistrationForm()
 
     return render(request, "accounts/register.html", {"form": form})
 
 
+class CustomLoginView(LoginView):
+    """
+    Custom login view with "Remember me" functionality.
+
+    Session behavior:
+    - If "remember_me" is checked: Session expires after 14 days (2 weeks)
+    - If unchecked: Session expires when browser closes (default behavior)
+    """
+    template_name = 'registration/login.html'
+
+    def form_valid(self, form):
+        """Handle successful login with remember me functionality."""
+        remember_me = self.request.POST.get('remember_me')
+
+        # Call parent form_valid to log the user in
+        response = super().form_valid(form)
+
+        if remember_me:
+            # Remember me is checked - keep session for 14 days
+            # 14 days * 24 hours * 60 minutes * 60 seconds = 1209600 seconds
+            self.request.session.set_expiry(1209600)
+            logger.info(f"User {self.request.user.username} logged in with 'Remember me' (14 days)")
+        else:
+            # Remember me is NOT checked - session expires on browser close
+            self.request.session.set_expiry(0)
+            logger.info(f"User {self.request.user.username} logged in without 'Remember me' (browser close)")
+
+        return response
+
+
 # ============================================================================
-# DOCTOR VIEWS
+# STAFF VIEWS
 # ============================================================================
 
 
 @login_required
-def doctor_dashboard(request):
-    """Doctor dashboard with recent predictions and quick stats"""
-    if not request.user.profile.is_doctor():
-        messages.error(request, "Access denied. Doctors only.")
+def staff_dashboard(request):
+    """Staff dashboard with recent predictions and quick stats (Refactored with Service Layer)"""
+    if not request.user.profile.is_staff():
+        messages.error(request, "Access denied. Staff only.")
         return redirect("home")
 
-    recent_predictions = (
-        Prediction.objects.all()
-        .select_related("xray__patient__user")
-        .order_by("-created_at")[:10]
-    )
-
-    # Statistics
-    total_predictions = Prediction.objects.count()
-    covid_cases = Prediction.objects.filter(final_diagnosis="COVID").count()
-    normal_cases = Prediction.objects.filter(final_diagnosis="Normal").count()
-    pending_validation = Prediction.objects.filter(is_validated=False).count()
+    # ✅ NEW: Single service call aggregates all dashboard data
+    stats = StatisticsService.get_staff_dashboard_stats(request.user)
 
     context = {
-        "recent_predictions": recent_predictions,
-        "total_predictions": total_predictions,
-        "covid_cases": covid_cases,
-        "normal_cases": normal_cases,
-        "pending_validation": pending_validation,
+        "recent_predictions": stats['recent_predictions'],
+        "total_predictions": stats['total_predictions'],
+        "covid_cases": stats['covid_cases'],
+        "normal_cases": stats['normal_cases'],
+        "pending_validation": stats['pending_validation'],
     }
 
-    return render(request, "dashboards/doctor_dashboard.html", context)
+    return render(request, "detection/staff_dashboard.html", context)
 
 
 @login_required
 def upload_xray(request):
     """
-    🌟 MAIN VIEW: Upload X-ray and run multi-model predictions
+    🌟 MAIN VIEW: Upload X-ray and run multi-model predictions (Refactored with Service Layer)
     """
-    if not request.user.profile.is_doctor():
-        messages.error(request, "Access denied. Doctors only.")
+    if not request.user.profile.is_staff():
+        messages.error(request, "Access denied. Staff only.")
         return redirect("home")
 
     if request.method == "POST":
         form = XRayUploadForm(request.POST, request.FILES)
-
-        # Get patient ID from form or default to first patient
         patient_id = request.POST.get("patient_id")
 
         if form.is_valid():
             try:
-                # Get or create patient
+                # Get patient
                 if patient_id:
                     patient = get_object_or_404(Patient, id=patient_id)
                 else:
@@ -146,101 +184,34 @@ def upload_xray(request):
                         )
                         return render(request, "detection/upload.html", {"form": form})
 
-                # Save uploaded image
-                xray = form.save(commit=False)
-                xray.patient = patient
-                xray.uploaded_by = request.user
-                xray.save()
-
-                logger.info(f"✅ X-ray uploaded: {xray.original_image.path}")
-
-                # Apply CLAHE preprocessing
-                logger.info("🔧 Applying CLAHE preprocessing...")
-                processed_path = apply_clahe(xray.original_image.path)
-
-                # Update xray with processed image path
-                # Convert absolute path to relative media path
-                from django.conf import settings
-
-                relative_path = os.path.relpath(processed_path, settings.MEDIA_ROOT)
-                xray.processed_image = relative_path
-                xray.save()
-
-                # 🔥 RUN ALL 6 MODELS - SPOTLIGHT 1
-                logger.info("🚀 Running multi-model prediction ensemble...")
-
-                if model_ensemble is None:
-                    messages.error(
-                        request, "ML Engine not initialized. Please contact admin."
-                    )
-                    return redirect("detection:doctor_dashboard")
-
-                results = model_ensemble.predict_all_models(processed_path)
-
-                # Save predictions to database
-                prediction = Prediction.objects.create(
-                    xray=xray,
-                    # CrossViT
-                    crossvit_prediction=results["individual_results"]["crossvit"][
-                        "prediction"
-                    ],
-                    crossvit_confidence=results["individual_results"]["crossvit"][
-                        "confidence"
-                    ],
-                    # ResNet-50
-                    resnet50_prediction=results["individual_results"]["resnet50"][
-                        "prediction"
-                    ],
-                    resnet50_confidence=results["individual_results"]["resnet50"][
-                        "confidence"
-                    ],
-                    # DenseNet-121
-                    densenet121_prediction=results["individual_results"]["densenet121"][
-                        "prediction"
-                    ],
-                    densenet121_confidence=results["individual_results"]["densenet121"][
-                        "confidence"
-                    ],
-                    # EfficientNet-B0
-                    efficientnet_prediction=results["individual_results"][
-                        "efficientnet"
-                    ]["prediction"],
-                    efficientnet_confidence=results["individual_results"][
-                        "efficientnet"
-                    ]["confidence"],
-                    # ViT-Base
-                    vit_prediction=results["individual_results"]["vit"]["prediction"],
-                    vit_confidence=results["individual_results"]["vit"]["confidence"],
-                    # Swin-Tiny
-                    swin_prediction=results["individual_results"]["swin"]["prediction"],
-                    swin_confidence=results["individual_results"]["swin"]["confidence"],
-                    # Final diagnosis
-                    final_diagnosis=results["consensus_diagnosis"],
-                    consensus_confidence=results["best_confidence"],
-                    inference_time=results["inference_time"],
+                # ✅ NEW: Single service call handles entire workflow
+                # - Save X-ray image
+                # - Apply preprocessing
+                # - Run 6 ML models
+                # - Save prediction
+                # - Send notification
+                prediction = PredictionService.create_prediction_from_xray(
+                    xray_image_file=request.FILES['original_image'],
+                    patient=patient,
+                    uploaded_by=request.user,
+                    notes=form.cleaned_data.get('notes', '')
                 )
-
-                logger.info(f"✅ Prediction saved: ID={prediction.id}")
-
-                # Send notification to patient
-                try:
-                    NotificationService.send_prediction_notification(prediction)
-                    logger.info(f"📧 Notification sent for prediction ID={prediction.id}")
-                except Exception as e:
-                    logger.error(f"❌ Failed to send notification: {e}")
 
                 messages.success(
                     request,
-                    f'✅ Analysis complete! Consensus: {results["consensus_diagnosis"]} '
-                    f'({results["model_agreement"]}/6 models agree)',
+                    f'✅ Analysis complete! Diagnosis: {prediction.final_diagnosis} '
+                    f'(Confidence: {prediction.consensus_confidence:.1f}%)'
                 )
 
                 return redirect("detection:view_results", prediction_id=prediction.id)
 
+            except MLInferenceError as e:
+                logger.error(f"ML inference error: {e}")
+                messages.error(request, f"ML analysis failed: {str(e)}")
             except Exception as e:
                 logger.error(f"❌ Error during prediction: {e}", exc_info=True)
                 messages.error(request, f"Error during analysis: {str(e)}")
-                return render(request, "detection/upload.html", {"form": form})
+
     else:
         form = XRayUploadForm()
 
@@ -365,8 +336,8 @@ def explain_prediction(request, prediction_id):
 @login_required
 def prediction_history(request):
     """View all past predictions"""
-    if request.user.profile.is_doctor():
-        # Doctors see all predictions
+    if request.user.profile.is_staff():
+        # Staff see all predictions
         predictions = (
             Prediction.objects.all()
             .select_related("xray__patient__user", "reviewed_by")
@@ -394,7 +365,7 @@ def prediction_history(request):
 @require_POST
 def add_doctor_notes(request, prediction_id):
     """Add doctor notes to a prediction"""
-    if not request.user.profile.is_doctor():
+    if not request.user.profile.is_staff():
         return JsonResponse({"error": "Access denied"}, status=403)
 
     prediction = get_object_or_404(Prediction, id=prediction_id)
@@ -450,7 +421,7 @@ def patient_dashboard(request):
         "covid_positive": covid_positive,
     }
 
-    return render(request, "dashboards/patient_dashboard.html", context)
+    return render(request, "detection/patient_dashboard.html", context)
 
 
 @login_required

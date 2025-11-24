@@ -3,9 +3,9 @@ from django.contrib import messages
 from functools import wraps
 
 
-def doctor_required(view_func):
+def staff_required(view_func):
     """
-    Decorator to ensure user is a doctor or admin
+    Decorator to ensure user is a staff or admin
     """
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
@@ -13,8 +13,8 @@ def doctor_required(view_func):
             messages.error(request, "You don't have permission to access this page.")
             return redirect('detection:home')
 
-        if not (request.user.profile.is_doctor() or request.user.profile.is_admin()):
-            messages.error(request, "Only doctors can access this page.")
+        if not (request.user.profile.is_staff() or request.user.profile.is_admin()):
+            messages.error(request, "Only staff can access this page.")
             return redirect('detection:patient_dashboard')
 
         return view_func(request, *args, **kwargs)

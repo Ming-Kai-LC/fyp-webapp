@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt.token_blacklist",
     "drf_yasg",
     "corsheaders",
+    # Foundation components (MUST be loaded first for all modules)
+    "common",
     # Your apps
     "accounts",
     "detection",
@@ -47,6 +49,7 @@ INSTALLED_APPS = [
     "appointments",
     "analytics",
     "api",
+    "announcements",  # Test module demonstrating foundation components
 ]
 
 MIDDLEWARE = [
@@ -62,6 +65,12 @@ MIDDLEWARE = [
 ]
 
 ROOT_URLCONF = "config.urls"
+
+# Session settings
+# Default session expiry is browser close (0), can be overridden by "remember me"
+SESSION_COOKIE_AGE = 1209600  # 2 weeks (14 days) - default max age
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Will be set dynamically by login view
+SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
 
 TEMPLATES = [
     {
@@ -429,20 +438,20 @@ SWAGGER_SETTINGS = {
 print(
     f"""
 {'='*80}
-🎓 {PROJECT_NAME}
+{PROJECT_NAME}
    Version: {PROJECT_VERSION}
    Student: {STUDENT_NAME} ({STUDENT_ID})
    Supervisor: {SUPERVISOR}
    Institution: {UNIVERSITY}
 
-🔧 System Configuration:
+System Configuration:
    - Debug Mode: {DEBUG}
    - Database: {DATABASES['default']['ENGINE']}
    - Media Root: {MEDIA_ROOT}
    - Static Root: {STATIC_ROOT}
    - API Enabled: True (REST + JWT + Swagger)
 
-✅ Ready to start!
+Ready to start!
 {'='*80}
 """
 )

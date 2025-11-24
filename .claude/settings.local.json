@@ -1,0 +1,78 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Read(*)",
+      "Edit(*)",
+      "Write(*)",
+      "Glob(*)",
+      "Grep(*)",
+      "Task(*)",
+      "TodoWrite(*)",
+      "NotebookEdit(*)",
+      "BashOutput(*)",
+      "KillShell(*)",
+      "AskUserQuestion(*)",
+      "Skill(*)",
+      "SlashCommand(*)",
+      "ExitPlanMode",
+      "mcp__ide__getDiagnostics",
+      "mcp__ide__executeCode",
+      "mcp__*",
+      "Bash"
+    ],
+    "deny": [
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(**/.env)",
+      "Read(**/.env.*)",
+      "Read(**/secrets/**)",
+      "Read(**/credentials.json)",
+      "Read(**/config/secrets.py)",
+      "Edit(.env)",
+      "Edit(.env.*)",
+      "Edit(**/.env)",
+      "Edit(**/secrets/**)",
+      "Write(.env)",
+      "Write(.env.*)",
+      "Write(**/secrets/**)",
+      "Bash(rm -rf /:*)",
+      "Bash(rm -rf .:*)",
+      "Bash(rm -rf ~:*)",
+      "Bash(sudo rm:*)",
+      "Bash(sudo:*)",
+      "Bash(su:*)",
+      "Bash(git push --force main:*)",
+      "Bash(git push --force master:*)",
+      "Bash(git push -f main:*)",
+      "Bash(git push -f master:*)",
+      "Bash(venv/Scripts/python.exe manage.py flush:*)",
+      "Bash(venv/Scripts/python.exe manage.py dbshell:*)",
+      "Bash(python manage.py flush:*)",
+      "Bash(python manage.py dbshell:*)",
+      "Bash(dropdb:*)",
+      "Bash(shutdown:*)",
+      "Bash(reboot:*)",
+      "Bash(format:*)",
+      "Bash(mkfs:*)",
+      "Bash(dd if=:*)",
+      "Bash(curl -X DELETE:*)",
+      "Bash(wget -O /etc:*)"
+    ],
+    "ask": [],
+    "defaultMode": "bypassPermissions"
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"[$(date)] Modified: $(echo \"$TOOL_INPUT\" | jq -r '.file_path // \"unknown\"')\" >> .claude/file-changes.log"
+          }
+        ]
+      }
+    ]
+  }
+}

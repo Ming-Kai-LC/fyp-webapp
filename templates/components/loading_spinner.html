@@ -1,0 +1,21 @@
+{% comment %}
+Reusable loading spinner component.
+
+Usage:
+    {% include 'components/loading_spinner.html' with text="Loading..." %}
+    {% include 'components/loading_spinner.html' with text="Processing..." size="lg" %}
+
+Parameters:
+    - text: Loading message (default: "Loading...")
+    - size: Spinner size - 'sm' or 'lg' (default: normal)
+    - center: Whether to center the spinner (default: True)
+{% endcomment %}
+
+<div class="{% if center|default:True %}text-center{% endif %} loading-spinner">
+    <div class="spinner-border{% if size == 'sm' %} spinner-border-sm{% endif %}" role="status">
+        <span class="visually-hidden">{{ text|default:"Loading..." }}</span>
+    </div>
+    {% if text %}
+        <p class="mt-2 text-muted">{{ text }}</p>
+    {% endif %}
+</div>

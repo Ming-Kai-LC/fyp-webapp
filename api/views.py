@@ -11,13 +11,18 @@ from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError, PermissionDenied
 from detection.models import Prediction, Patient, XRayImage
+from detection.services import PredictionService, MLInferenceError
 from appointments.models import Appointment
 from .serializers import (
     PredictionSerializer, PatientSerializer, AppointmentSerializer,
     UserRegistrationSerializer, PredictionCreateSerializer
 )
-from .permissions import IsDoctorOrAdmin, IsPatientOwner
+from .permissions import IsStaffOrAdmin, IsPatientOwner
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class PredictionViewSet(viewsets.ModelViewSet):
@@ -28,48 +33,112 @@ class PredictionViewSet(viewsets.ModelViewSet):
     retrieve: Get a specific prediction
     upload: Upload X-ray image and get prediction
     explain: Get explainability data (Grad-CAM, attention maps)
-    validate: Validate prediction (doctor only)
+    validate: Validate prediction (staff only)
     """
     queryset = Prediction.objects.all()
     serializer_class = PredictionSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Filter predictions based on user role"""
-        user = self.request.user
+        """
+        Filter predictions based on user role (Refactored with Service Layer)
 
-        # Patients see only their own predictions
-        if hasattr(user, 'profile') and user.profile.is_patient():
-            if hasattr(user, 'patient_info'):
-                return Prediction.objects.filter(xray__patient=user.patient_info)
-            return Prediction.objects.none()
+        Uses PredictionService to ensure consistent permission logic
+        across web views and API endpoints.
+        """
+        # ✅ NEW: Use service for consistent permission filtering
+        return PredictionService.get_predictions_for_user(self.request.user)
 
-        # Doctors and admins see all
-        return Prediction.objects.all()
-
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[IsStaffOrAdmin])
     def upload(self, request):
         """
-        Upload X-ray image and get prediction
+        Upload X-ray image and get prediction (Implemented with Service Layer)
 
-        This endpoint handles image upload and runs the prediction pipeline.
-        The actual prediction logic should be implemented using the detection module.
+        Handles complete prediction workflow:
+        1. Validate inputs
+        2. Save X-ray image
+        3. Apply preprocessing (CLAHE)
+        4. Run 6 ML models
+        5. Calculate consensus diagnosis
+        6. Save prediction
+        7. Send notification
+
+        Request body:
+        - image: X-ray image file (required)
+        - patient_id: Patient ID (required)
+        - notes: Clinical notes (optional)
+
+        Returns:
+        - Prediction object with all model results
         """
         serializer = PredictionCreateSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # TODO: Implement prediction pipeline integration
-        # This would involve:
-        # 1. Creating XRayImage instance
-        # 2. Running image preprocessing
-        # 3. Running all 6 AI models
-        # 4. Creating Prediction instance with results
-        # 5. Generating explainability visualizations
+        patient_id = serializer.validated_data.get('patient_id')
+        image_file = request.FILES.get('image')
+        notes = serializer.validated_data.get('notes', '')
 
-        return Response(
-            {'message': 'Prediction upload endpoint - implementation pending'},
-            status=status.HTTP_501_NOT_IMPLEMENTED
-        )
+        if not image_file:
+            return Response(
+                {'error': 'Image file is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Get patient
+            patient = Patient.objects.get(id=patient_id)
+
+            # ✅ NEW: Use PredictionService for complete workflow
+            # Same service used by web views - ensures consistency
+            prediction = PredictionService.create_prediction_from_xray(
+                xray_image_file=image_file,
+                patient=patient,
+                uploaded_by=request.user,
+                notes=notes
+            )
+
+            logger.info(
+                f"API prediction created: ID={prediction.id}, "
+                f"Diagnosis={prediction.final_diagnosis}, "
+                f"User={request.user.username}"
+            )
+
+            # Return serialized prediction
+            return Response(
+                {
+                    'message': 'Prediction completed successfully',
+                    'prediction': PredictionSerializer(prediction).data
+                },
+                status=status.HTTP_201_CREATED
+            )
+
+        except Patient.DoesNotExist:
+            return Response(
+                {'error': f'Patient with ID {patient_id} not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except PermissionDenied as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except MLInferenceError as e:
+            logger.error(f"ML inference error in API: {e}")
+            return Response(
+                {'error': f'ML analysis failed: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        except ValidationError as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            logger.error(f"Unexpected error in API upload: {e}", exc_info=True)
+            return Response(
+                {'error': 'An unexpected error occurred during prediction'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'])
     def explain(self, request, pk=None):
@@ -86,12 +155,12 @@ class PredictionViewSet(viewsets.ModelViewSet):
             'small_branch_attention': prediction.small_branch_attention.url if prediction.small_branch_attention else None,
         })
 
-    @action(detail=True, methods=['patch'], permission_classes=[IsDoctorOrAdmin])
+    @action(detail=True, methods=['patch'], permission_classes=[IsStaffOrAdmin])
     def validate(self, request, pk=None):
         """
-        Validate prediction (doctor only)
+        Validate prediction (staff only)
 
-        Marks the prediction as validated by a doctor.
+        Marks the prediction as validated by staff.
         """
         prediction = self.get_object()
         doctor_notes = request.data.get('doctor_notes', '')
@@ -113,7 +182,7 @@ class PatientViewSet(viewsets.ModelViewSet):
     """
     API endpoints for patients
 
-    list: Get all patients (doctor/admin only)
+    list: Get all patients (staff/admin only)
     retrieve: Get patient details
     me: Get/update own patient profile
     """
@@ -131,7 +200,7 @@ class PatientViewSet(viewsets.ModelViewSet):
                 return Patient.objects.filter(user=user)
             return Patient.objects.none()
 
-        # Doctors and admins see all
+        # Staff and admins see all
         return Patient.objects.all()
 
     @action(detail=False, methods=['get', 'patch'])
@@ -205,7 +274,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         if hasattr(user, 'profile'):
             if user.profile.is_patient() and hasattr(user, 'patient_info'):
                 return Appointment.objects.filter(patient=user.patient_info)
-            elif user.profile.is_doctor():
+            elif user.profile.is_staff():
                 return Appointment.objects.filter(doctor=user)
 
         return Appointment.objects.all()

@@ -1,9 +1,11 @@
 ---
-name: Code Quality Standards
-description: Maintains PEP 8 compliance, type hints, docstrings, and 80%+ test coverage. Auto-applies code quality standards, testing patterns, and documentation requirements.
+name: Code Quality Standards & Environment Management
+description: Maintains PEP 8 compliance, type hints, docstrings, 80%+ test coverage, and enforces virtual environment usage. Auto-applies to all Python code execution, package installations, and development workflows.
 ---
 
-Maintains high code quality, readability, and test coverage throughout the project.
+# Code Quality Standards & Environment Management
+
+Maintains high code quality, readability, test coverage, and proper Python environment isolation throughout the project.
 
 ## Core Principles
 
@@ -13,8 +15,125 @@ Maintains high code quality, readability, and test coverage throughout the proje
 4. **Documentation**: Docstrings for all public APIs
 5. **Linting**: Follow PEP 8 and Django best practices
 6. **DRY**: Don't repeat yourself
+7. **Isolation**: All Python operations in virtual environment
+8. **Reproducibility**: Dependencies tracked in requirements.txt
 
-## Code Style (PEP 8 + Django)
+---
+
+## Part 1: Virtual Environment Management
+
+### Virtual Environment Rules
+
+**CRITICAL: ALWAYS use virtual environment for ALL Python operations**
+
+### Location
+```
+fyp-webapp/
+├── venv/                    # Virtual environment directory
+│   ├── Scripts/            # (Windows) Executables and activation scripts
+│   ├── Lib/                # Python packages
+│   └── ...
+├── requirements.txt        # Package dependencies
+└── ...
+```
+
+### ✅ ALWAYS Use Virtual Environment Python
+
+**Windows:**
+```bash
+# Python commands
+venv/Scripts/python.exe script.py
+venv/Scripts/python.exe manage.py runserver
+venv/Scripts/python.exe manage.py migrate
+
+# Pip commands
+venv/Scripts/python.exe -m pip install package_name
+venv/Scripts/python.exe -m pip install -r requirements.txt
+venv/Scripts/python.exe -m pip freeze > requirements.txt
+```
+
+**Linux/Mac:**
+```bash
+# Python commands
+venv/bin/python script.py
+venv/bin/python manage.py runserver
+venv/bin/python manage.py migrate
+
+# Pip commands
+venv/bin/python -m pip install package_name
+venv/bin/python -m pip install -r requirements.txt
+venv/bin/python -m pip freeze > requirements.txt
+```
+
+### ❌ NEVER Use Global Python
+
+```bash
+# DON'T do this:
+python manage.py runserver        # Uses system Python
+pip install django                 # Installs globally
+
+# ALWAYS do this instead:
+venv/Scripts/python.exe manage.py runserver    # Windows
+venv/bin/python manage.py runserver            # Linux/Mac
+```
+
+### Common Django Commands with venv
+
+```bash
+# Windows
+venv/Scripts/python.exe manage.py runserver
+venv/Scripts/python.exe manage.py makemigrations
+venv/Scripts/python.exe manage.py migrate
+venv/Scripts/python.exe manage.py test
+venv/Scripts/python.exe -m pytest
+venv/Scripts/python.exe manage.py createsuperuser
+
+# Linux/Mac
+venv/bin/python manage.py runserver
+venv/bin/python manage.py makemigrations
+venv/bin/python manage.py migrate
+venv/bin/python manage.py test
+venv/bin/python -m pytest
+venv/bin/python manage.py createsuperuser
+```
+
+### Package Management
+
+**Installing new packages:**
+```bash
+# Windows
+venv/Scripts/python.exe -m pip install package_name
+venv/Scripts/python.exe -m pip freeze > requirements.txt
+
+# Linux/Mac
+venv/bin/python -m pip install package_name
+venv/bin/python -m pip freeze > requirements.txt
+```
+
+**Installing from requirements.txt:**
+```bash
+# Windows
+venv/Scripts/python.exe -m pip install -r requirements.txt
+
+# Linux/Mac
+venv/bin/python -m pip install -r requirements.txt
+```
+
+### Verifying Virtual Environment
+
+```bash
+# Windows - Check Python location
+venv/Scripts/python.exe -c "import sys; print(sys.executable)"
+# Should output: D:\Users\USER\Documents\GitHub\fyp-webapp\venv\Scripts\python.exe
+
+# Linux/Mac - Check Python location
+venv/bin/python -c "import sys; print(sys.executable)"
+# Should output: /path/to/fyp-webapp/venv/bin/python
+```
+
+---
+
+## Part 2: Code Style (PEP 8 + Django)
 
 ### Naming Conventions
 
@@ -117,7 +236,9 @@ class PredictionService:
         return []
 ```
 
-## Documentation Standards
+---
+
+## Part 3: Documentation Standards
 
 ### Module Docstrings
 
@@ -186,7 +307,9 @@ def create_prediction(xray: XRayImage, use_cache: bool = True) -> Prediction:
     pass
 ```
 
-## Testing Standards
+---
+
+## Part 4: Testing Standards
 
 ### Test Structure
 
@@ -264,27 +387,6 @@ class PredictionModelTest(TestCase):
             consensus_confidence=92.0
         )
         self.assertTrue(prediction.is_high_confidence())
-
-    def test_is_high_confidence_returns_false_for_below_90(self):
-        """Test low confidence detection"""
-        prediction = Prediction.objects.create(
-            xray=self.xray,
-            final_diagnosis='COVID',
-            consensus_confidence=85.0
-        )
-        self.assertFalse(prediction.is_high_confidence())
-
-    def test_get_best_model_returns_model_with_highest_confidence(self):
-        """Test best model selection"""
-        prediction = Prediction.objects.create(
-            xray=self.xray,
-            crossvit_confidence=95.0,
-            resnet50_confidence=88.0,
-            densenet121_confidence=90.0
-        )
-        model_name, confidence = prediction.get_best_model()
-        self.assertEqual(model_name, 'CrossViT')
-        self.assertEqual(confidence, 95.0)
 ```
 
 ### View Tests
@@ -294,7 +396,6 @@ class PredictionModelTest(TestCase):
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.contrib.auth.models import User
-from detection.models import UserProfile
 
 class DoctorDashboardViewTest(TestCase):
     """Test doctor dashboard view"""
@@ -311,14 +412,6 @@ class DoctorDashboardViewTest(TestCase):
         self.doctor.profile.role = 'doctor'
         self.doctor.profile.save()
 
-        # Create patient user
-        self.patient = User.objects.create_user(
-            username='patient',
-            password='testpass123'
-        )
-        self.patient.profile.role = 'patient'
-        self.patient.profile.save()
-
     def test_doctor_can_access_dashboard(self):
         """Test doctor access to dashboard"""
         self.client.login(username='doctor', password='testpass123')
@@ -327,29 +420,12 @@ class DoctorDashboardViewTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'detection/doctor_dashboard.html')
 
-    def test_patient_cannot_access_doctor_dashboard(self):
-        """Test patient is denied access"""
-        self.client.login(username='patient', password='testpass123')
-        response = self.client.get(reverse('detection:doctor_dashboard'))
-
-        self.assertEqual(response.status_code, 302)  # Redirect
-        self.assertRedirects(response, reverse('home'))
-
     def test_unauthenticated_user_redirected_to_login(self):
         """Test authentication requirement"""
         response = self.client.get(reverse('detection:doctor_dashboard'))
 
         self.assertEqual(response.status_code, 302)
         self.assertIn('/accounts/login/', response.url)
-
-    def test_dashboard_shows_recent_predictions(self):
-        """Test dashboard displays recent predictions"""
-        self.client.login(username='doctor', password='testpass123')
-        # Create test predictions...
-        response = self.client.get(reverse('detection:doctor_dashboard'))
-
-        self.assertIn('recent_predictions', response.context)
-        self.assertIn('stats', response.context)
 ```
 
 ### Form Tests
@@ -359,18 +435,12 @@ class DoctorDashboardViewTest(TestCase):
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from detection.forms import XRayUploadForm
-from detection.models import Patient
 
 class XRayUploadFormTest(TestCase):
     """Test X-ray upload form"""
 
-    def setUp(self):
-        """Create test patient"""
-        self.patient = Patient.objects.create(age=35, gender='M')
-
     def test_form_with_valid_data_is_valid(self):
         """Test form validation with valid data"""
-        # Create mock image file
         image = SimpleUploadedFile(
             "test.jpg",
             b"fake image content",
@@ -385,34 +455,16 @@ class XRayUploadFormTest(TestCase):
 
     def test_form_with_large_file_is_invalid(self):
         """Test file size validation"""
-        # Create 11MB file (exceeds 10MB limit)
-        large_content = b"x" * (11 * 1024 * 1024)
+        large_content = b"x" * (11 * 1024 * 1024)  # 11MB
         large_image = SimpleUploadedFile(
             "large.jpg",
             large_content,
             content_type="image/jpeg"
         )
 
-        form_data = {'patient': self.patient.id}
-        form_files = {'original_image': large_image}
-
-        form = XRayUploadForm(data=form_data, files=form_files)
+        form = XRayUploadForm(data=form_data, files={'original_image': large_image})
         self.assertFalse(form.is_valid())
         self.assertIn('original_image', form.errors)
-
-    def test_form_with_invalid_extension_is_invalid(self):
-        """Test file extension validation"""
-        txt_file = SimpleUploadedFile(
-            "test.txt",
-            b"not an image",
-            content_type="text/plain"
-        )
-
-        form_data = {'patient': self.patient.id}
-        form_files = {'original_image': txt_file}
-
-        form = XRayUploadForm(data=form_data, files=form_files)
-        self.assertFalse(form.is_valid())
 ```
 
 ### Service Layer Tests
@@ -422,7 +474,6 @@ class XRayUploadFormTest(TestCase):
 from django.test import TestCase
 from unittest.mock import Mock, patch
 from detection.services import PredictionService
-from detection.models import XRayImage
 
 class PredictionServiceTest(TestCase):
     """Test prediction service"""
@@ -430,7 +481,6 @@ class PredictionServiceTest(TestCase):
     @patch('detection.services.model_ensemble')
     def test_create_prediction_with_valid_xray_returns_prediction(self, mock_ensemble):
         """Test prediction creation"""
-        # Mock ML engine response
         mock_ensemble.predict_all_models.return_value = {
             'crossvit': {'class': 'COVID', 'confidence': 95.0},
             'resnet50': {'class': 'COVID', 'confidence': 88.0},
@@ -443,20 +493,7 @@ class PredictionServiceTest(TestCase):
 
         self.assertIsNotNone(prediction)
         self.assertEqual(prediction.final_diagnosis, 'COVID')
-        self.assertEqual(prediction.consensus_confidence, 92.0)
         mock_ensemble.predict_all_models.assert_called_once()
-
-    def test_validate_prediction_marks_as_validated(self):
-        """Test prediction validation"""
-        prediction = Prediction.objects.create(...)
-        doctor = User.objects.create_user('doctor', 'pass')
-
-        PredictionService.validate_prediction(prediction, doctor, "Looks correct")
-
-        prediction.refresh_from_db()
-        self.assertTrue(prediction.is_validated)
-        self.assertEqual(prediction.reviewed_by, doctor)
-        self.assertEqual(prediction.doctor_notes, "Looks correct")
 ```
 
 ### Test Factories (Using Factory Boy)
@@ -466,7 +503,7 @@ class PredictionServiceTest(TestCase):
 import factory
 from factory.django import DjangoModelFactory
 from django.contrib.auth.models import User
-from detection.models import Patient, XRayImage, Prediction
+from detection.models import Patient, XRayImage
 
 class UserFactory(DjangoModelFactory):
     class Meta:
@@ -485,20 +522,15 @@ class PatientFactory(DjangoModelFactory):
     age = factory.Faker('random_int', min=18, max=90)
     gender = factory.Faker('random_element', elements=['M', 'F'])
 
-class XRayImageFactory(DjangoModelFactory):
-    class Meta:
-        model = XRayImage
-
-    patient = factory.SubFactory(PatientFactory)
-    original_image = factory.django.ImageField()
-
 # Usage in tests
 def test_something(self):
     patient = PatientFactory()
     xray = XRayImageFactory(patient=patient)
 ```
 
-## Code Quality Tools
+---
+
+## Part 5: Code Quality Tools
 
 ### Configuration Files
 
@@ -556,11 +588,14 @@ repos:
       - id: isort
 ```
 
-## Code Review Checklist
+---
 
-Before committing:
+## Part 6: Code Review Checklist
 
-- ✅ All tests pass (`pytest`)
+### Before Committing:
+
+**Code Quality:**
+- ✅ All tests pass (`venv/Scripts/python.exe -m pytest`)
 - ✅ Code coverage ≥ 80% for new code
 - ✅ No linting errors (`flake8`)
 - ✅ Code formatted (`black`)
@@ -570,12 +605,138 @@ Before committing:
 - ✅ No print statements (use logging)
 - ✅ No hardcoded values (use settings)
 - ✅ Error handling implemented
+
+**Virtual Environment:**
+- ✅ Virtual environment exists at `venv/`
+- ✅ All commands use `venv/Scripts/python.exe` (Windows) or `venv/bin/python` (Linux/Mac)
+- ✅ requirements.txt is up to date
+- ✅ venv is in .gitignore
+- ✅ Not using global `python` or `pip`
+
+**Security & Performance:**
 - ✅ Security vulnerabilities addressed
 - ✅ Performance considerations reviewed
 
+---
+
+## Part 7: Project Dependencies
+
+### Current Dependencies
+
+**Core Django:**
+- Django==4.2.7
+- django-crispy-forms
+- crispy-bootstrap5
+
+**ML/AI:**
+- torch
+- torchvision
+- timm
+- opencv-python
+- scikit-learn
+- numpy
+- pandas
+
+**REST API:**
+- djangorestframework
+- djangorestframework-simplejwt
+- drf-yasg
+- django-cors-headers
+- django-filter
+
+**Reporting:**
+- weasyprint
+- xhtml2pdf
+- openpyxl
+- qrcode
+
+**Utilities:**
+- Pillow
+- plotly
+- python-dateutil
+- pytz
+
+### Updating requirements.txt
+
+**After installing new packages:**
+```bash
+# Windows
+venv/Scripts/python.exe -m pip freeze > requirements.txt
+
+# Linux/Mac
+venv/bin/python -m pip freeze > requirements.txt
+```
+
+**Best practice:** Commit requirements.txt with every package change
+
+---
+
 ## Auto-Apply This Skill When:
+
+**Virtual Environment Enforcement:**
+- Running `python` commands
+- Running `pip` commands
+- Running Django `manage.py` commands
+- Installing or upgrading packages
+- Running tests
+- Starting development server
+- Performing database migrations
+- Creating new Django apps
+- Executing Python scripts
+
+**Code Quality Standards:**
 - Writing any new code
 - Refactoring existing code
 - Creating new modules/features
 - Reviewing pull requests
 - Preparing for production
+
+---
+
+## Critical Reminders
+
+**Virtual Environment:**
+1. **NEVER** use bare `python` or `pip` commands
+2. **ALWAYS** use `venv/Scripts/python.exe` (Windows) or `venv/bin/python` (Linux/Mac)
+3. **ALWAYS** update requirements.txt after package changes
+4. **NEVER** commit the venv folder to git
+
+**Code Quality:**
+5. **ALWAYS** add type hints to public functions
+6. **ALWAYS** write docstrings for classes and functions
+7. **ALWAYS** maintain 80%+ test coverage
+8. **ALWAYS** follow PEP 8 naming conventions
+
+---
+
+## Quick Reference Card
+
+**Windows:**
+```bash
+# Python
+venv/Scripts/python.exe
+
+# Pip
+venv/Scripts/python.exe -m pip
+
+# Django manage.py
+venv/Scripts/python.exe manage.py
+
+# Tests
+venv/Scripts/python.exe -m pytest
+```
+
+**Linux/Mac:**
+```bash
+# Python
+venv/bin/python
+
+# Pip
+venv/bin/python -m pip
+
+# Django manage.py
+venv/bin/python manage.py
+
+# Tests
+venv/bin/python -m pytest
+```

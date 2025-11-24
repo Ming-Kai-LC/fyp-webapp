@@ -1,0 +1,39 @@
+{% comment %}
+Reusable card component.
+
+Usage:
+    {% include 'components/card.html' with title="Card Title" %}
+
+Parameters:
+    - title: Card header title (optional)
+    - body: Card body content (use with|default if in block)
+    - footer: Card footer content (optional)
+    - card_class: Additional classes for card div (optional)
+    - header_class: Additional classes for card header (optional)
+    - body_class: Additional classes for card body (optional)
+    - footer_class: Additional classes for card footer (optional)
+{% endcomment %}
+
+<div class="card {{ card_class }}">
+    {% if title %}
+        <div class="card-header {{ header_class }}">
+            {% if title_icon %}
+                <i class="bi bi-{{ title_icon }} me-2"></i>
+            {% endif %}
+            <h5 class="card-title mb-0">{{ title }}</h5>
+        </div>
+    {% endif %}
+
+    {% if body or not title and not footer %}
+        <div class="card-body {{ body_class }}">
+            {{ body|safe }}
+            {% block card_body %}{% endblock %}
+        </div>
+    {% endif %}
+
+    {% if footer %}
+        <div class="card-footer {{ footer_class }}">
+            {{ footer|safe }}
+        </div>
+    {% endif %}
+</div>

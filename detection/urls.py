@@ -10,7 +10,7 @@ app_name = "detection"
 
 urlpatterns = [
     # Dashboards
-    path("doctor/dashboard/", views.doctor_dashboard, name="doctor_dashboard"),
+    path("staff/dashboard/", views.staff_dashboard, name="staff_dashboard"),
     path("patient/dashboard/", views.patient_dashboard, name="patient_dashboard"),
     # Upload & Prediction
     path("upload/", views.upload_xray, name="upload_xray"),
@@ -21,7 +21,7 @@ urlpatterns = [
         name="explain_prediction",
     ),
     path("history/", views.prediction_history, name="prediction_history"),
-    # Doctor actions
+    # Staff actions
     path(
         "add-notes/<int:prediction_id>/",
         views.add_doctor_notes,

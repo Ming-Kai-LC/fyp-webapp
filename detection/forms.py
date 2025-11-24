@@ -34,24 +34,42 @@ class XRayUploadForm(forms.ModelForm):
 
 
 class UserRegistrationForm(UserCreationForm):
-    """Extended user registration form with role selection"""
+    """
+    Patient registration form for public self-registration.
+
+    Security Note: This form is for PUBLIC registration and only creates patient accounts.
+    Staff users must be created by administrators through the admin panel.
+    This enforces the user-role-permissions skill: "Public registration is patient-only"
+    """
 
     email = forms.EmailField(
-        required=True, widget=forms.EmailInput(attrs={"class": "form-control"})
+        required=True,
+        widget=forms.EmailInput(attrs={
+            "class": "form-control",
+            "placeholder": "patient@example.com",
+            "autocomplete": "email"
+        }),
+        help_text="We'll use this for important health notifications"
     )
     first_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={"class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "John",
+            "autocomplete": "given-name"
+        }),
+        help_text="Your legal first name"
     )
     last_name = forms.CharField(
         max_length=30,
         required=True,
-        widget=forms.TextInput(attrs={"class": "form-control"}),
-    )
-    role = forms.ChoiceField(
-        choices=[("patient", "Patient"), ("doctor", "Doctor/Staff")],
-        widget=forms.Select(attrs={"class": "form-control"}),
+        widget=forms.TextInput(attrs={
+            "class": "form-control",
+            "placeholder": "Doe",
+            "autocomplete": "family-name"
+        }),
+        help_text="Your legal last name"
     )
 
     class Meta:
@@ -63,14 +81,98 @@ class UserRegistrationForm(UserCreationForm):
             "email",
             "password1",
             "password2",
-            "role",
         ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields["username"].widget.attrs.update({"class": "form-control"})
-        self.fields["password1"].widget.attrs.update({"class": "form-control"})
-        self.fields["password2"].widget.attrs.update({"class": "form-control"})
+
+        # Username field
+        self.fields["username"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "username",
+            "autocomplete": "username",
+            "minlength": "3",
+            "maxlength": "150"
+        })
+        self.fields["username"].help_text = "3-150 characters. Letters, digits and @/./+/-/_ only."
+
+        # Password fields
+        self.fields["password1"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Enter password",
+            "autocomplete": "new-password"
+        })
+        self.fields["password1"].help_text = (
+            "Your password must contain at least 8 characters and "
+            "can't be entirely numeric."
+        )
+
+        self.fields["password2"].widget.attrs.update({
+            "class": "form-control",
+            "placeholder": "Confirm password",
+            "autocomplete": "new-password"
+        })
+        self.fields["password2"].help_text = "Enter the same password for confirmation"
+
+        # Add labels
+        self.fields["username"].label = "Username"
+        self.fields["first_name"].label = "First Name"
+        self.fields["last_name"].label = "Last Name"
+        self.fields["email"].label = "Email Address"
+        self.fields["password1"].label = "Password"
+        self.fields["password2"].label = "Confirm Password"
+
+    def clean_email(self):
+        """Validate email is unique"""
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise forms.ValidationError(
+                "This email address is already registered. Please use a different email or login to your existing account."
+            )
+        return email
+
+    def clean_username(self):
+        """Validate username with better error messages"""
+        username = self.cleaned_data.get('username')
+
+        # Check length
+        if len(username) < 3:
+            raise forms.ValidationError("Username must be at least 3 characters long.")
+
+        # Check if exists
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError(
+                "This username is already taken. Please choose a different username."
+            )
+
+        return username
+
+    def clean_password1(self):
+        """Validate password strength"""
+        password = self.cleaned_data.get('password1')
+
+        # Check minimum length
+        if len(password) < 8:
+            raise forms.ValidationError("Password must be at least 8 characters long.")
+
+        # Check not entirely numeric
+        if password.isdigit():
+            raise forms.ValidationError("Password cannot be entirely numeric.")
+
+        return password
+
+    def clean(self):
+        """Validate passwords match"""
+        cleaned_data = super().clean()
+        password1 = cleaned_data.get('password1')
+        password2 = cleaned_data.get('password2')
+
+        if password1 and password2 and password1 != password2:
+            raise forms.ValidationError({
+                'password2': "The two password fields didn't match."
+            })
+
+        return cleaned_data
 
 
 class PatientProfileForm(forms.ModelForm):

@@ -7,9 +7,9 @@ Custom permission classes for role-based access control.
 from rest_framework import permissions
 
 
-class IsDoctorOrAdmin(permissions.BasePermission):
+class IsStaffOrAdmin(permissions.BasePermission):
     """
-    Permission check for doctor or admin role
+    Permission check for staff or admin role
     """
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
@@ -18,7 +18,7 @@ class IsDoctorOrAdmin(permissions.BasePermission):
         if not hasattr(request.user, 'profile'):
             return False
 
-        return request.user.profile.is_doctor() or request.user.profile.is_admin()
+        return request.user.profile.is_staff() or request.user.profile.is_admin()
 
 
 class IsPatientOwner(permissions.BasePermission):
@@ -41,7 +41,7 @@ class IsPatientOwner(permissions.BasePermission):
 class IsOwnerOrReadOnly(permissions.BasePermission):
     """
     Custom permission to only allow owners of an object to edit it.
-    Admins and doctors have read access to all objects.
+    Admins and staff have read access to all objects.
     """
     def has_object_permission(self, request, view, obj):
         # Read permissions are allowed to any authenticated user

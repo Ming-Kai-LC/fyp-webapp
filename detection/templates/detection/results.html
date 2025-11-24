@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load common_tags %}
 
 {% block title %}Prediction Results - COVID-19 Detection{% endblock %}
 
@@ -26,8 +27,8 @@
                         <h5 class="mb-0">Final Diagnosis</h5>
                     </div>
                     <div class="card-body text-center">
-                        <h1 class="display-4 prediction-result text-{{ prediction.final_diagnosis == 'COVID' and 'danger' or 'success' }}">
-                            {{ prediction.final_diagnosis }}
+                        <h1 class="display-4 prediction-result">
+                            {% diagnosis_badge prediction.final_diagnosis %}
                         </h1>
                         <p class="lead">Confidence: {{ prediction.consensus_confidence|floatformat:2 }}%</p>
                         <p class="text-muted">Model Agreement: {{ prediction.get_model_agreement }}/6 models</p>
@@ -53,32 +54,32 @@
                         <tbody>
                             <tr class="table-primary">
                                 <td><strong>CrossViT (Ours)</strong></td>
-                                <td><span class="badge bg-{{ prediction.crossvit_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.crossvit_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.crossvit_prediction %}</td>
                                 <td>{{ prediction.crossvit_confidence|floatformat:2 }}%</td>
                             </tr>
                             <tr>
                                 <td>ResNet-50</td>
-                                <td><span class="badge bg-{{ prediction.resnet50_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.resnet50_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.resnet50_prediction %}</td>
                                 <td>{{ prediction.resnet50_confidence|floatformat:2 }}%</td>
                             </tr>
                             <tr>
                                 <td>DenseNet-121</td>
-                                <td><span class="badge bg-{{ prediction.densenet121_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.densenet121_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.densenet121_prediction %}</td>
                                 <td>{{ prediction.densenet121_confidence|floatformat:2 }}%</td>
                             </tr>
                             <tr>
                                 <td>EfficientNet-B0</td>
-                                <td><span class="badge bg-{{ prediction.efficientnet_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.efficientnet_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.efficientnet_prediction %}</td>
                                 <td>{{ prediction.efficientnet_confidence|floatformat:2 }}%</td>
                             </tr>
                             <tr>
                                 <td>ViT-Base</td>
-                                <td><span class="badge bg-{{ prediction.vit_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.vit_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.vit_prediction %}</td>
                                 <td>{{ prediction.vit_confidence|floatformat:2 }}%</td>
                             </tr>
                             <tr>
                                 <td>Swin-Tiny</td>
-                                <td><span class="badge bg-{{ prediction.swin_prediction == 'COVID' and 'danger' or 'success' }}">{{ prediction.swin_prediction }}</span></td>
+                                <td>{% diagnosis_badge prediction.swin_prediction %}</td>
                                 <td>{{ prediction.swin_confidence|floatformat:2 }}%</td>
                             </tr>
                         </tbody>

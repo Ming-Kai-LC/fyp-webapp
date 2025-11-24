@@ -14,12 +14,12 @@ from django.utils import timezone
 class UserProfile(models.Model):
     """
     Extended user information with role-based access control
-    Roles: admin, doctor, patient
+    Roles: admin, staff, patient
     """
 
     ROLE_CHOICES = [
         ("admin", "Administrator"),
-        ("doctor", "Doctor/Staff"),
+        ("staff", "Staff"),
         ("patient", "Patient"),
     ]
 
@@ -52,8 +52,8 @@ class UserProfile(models.Model):
     def is_admin(self):
         return self.role == "admin"
 
-    def is_doctor(self):
-        return self.role == "doctor"
+    def is_staff(self):
+        return self.role == "staff"
 
     def is_patient(self):
         return self.role == "patient"

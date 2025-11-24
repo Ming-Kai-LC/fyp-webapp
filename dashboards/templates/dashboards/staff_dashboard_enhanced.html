@@ -1,0 +1,289 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Doctor Dashboard - COVID-19 Detection System{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-header {
+        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 0.5rem;
+    }
+
+    .stat-card {
+        border-left: 4px solid;
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+
+    .stat-card.primary { border-left-color: #0d6efd; }
+    .stat-card.success { border-left-color: #198754; }
+    .stat-card.warning { border-left-color: #ffc107; }
+    .stat-card.info { border-left-color: #0dcaf0; }
+
+    .widget-header {
+        background-color: #f8f9fa;
+        padding: 1rem;
+        border-bottom: 2px solid #dee2e6;
+        font-weight: 600;
+    }
+
+    .quick-action-btn {
+        margin: 0.5rem;
+        min-width: 150px;
+    }
+
+    .appointment-item, .prediction-item {
+        padding: 1rem;
+        border-bottom: 1px solid #dee2e6;
+        transition: background-color 0.2s;
+    }
+
+    .appointment-item:hover, .prediction-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .badge-diagnosis {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header text-center">
+        <h1><i class="bi bi-speedometer2"></i> Doctor Dashboard</h1>
+        <p class="mb-0">Welcome back, Dr. {{ user.get_full_name|default:user.username }}</p>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card primary">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Today's Patients</h6>
+                            <h2 class="mb-0">{{ total_today }}</h2>
+                        </div>
+                        <i class="bi bi-people-fill text-primary" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Pending Reviews</h6>
+                            <h2 class="mb-0">{{ pending_count }}</h2>
+                        </div>
+                        <i class="bi bi-clock-fill text-warning" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Validation Rate</h6>
+                            <h2 class="mb-0">{{ validation_rate|floatformat:1 }}%</h2>
+                        </div>
+                        <i class="bi bi-check-circle-fill text-success" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 mb-3">
+            <div class="card stat-card info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Appointments Today</h6>
+                            <h2 class="mb-0">{{ todays_appointments.count }}</h2>
+                        </div>
+                        <i class="bi bi-calendar-check-fill text-info" style="font-size: 2.5rem;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Widgets -->
+    <div class="row">
+        <!-- Left Column -->
+        <div class="col-lg-6 mb-4">
+            <!-- Today's Schedule -->
+            <div class="card mb-4">
+                <div class="widget-header">
+                    <i class="bi bi-calendar3"></i> Today's Schedule
+                </div>
+                <div class="card-body">
+                    {% if todays_appointments %}
+                        {% for appointment in todays_appointments %}
+                        <div class="appointment-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1">{{ appointment.patient.user.get_full_name }}</h6>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> {{ appointment.appointment_time }}
+                                    </small>
+                                </div>
+                                <span class="badge bg-{{ appointment.get_status_badge }}">
+                                    {{ appointment.get_status_display }}
+                                </span>
+                            </div>
+                            {% if appointment.reason %}
+                            <p class="mb-0 mt-2 text-muted small">{{ appointment.reason|truncatewords:15 }}</p>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted py-4">No appointments scheduled for today</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recent Predictions -->
+            <div class="card">
+                <div class="widget-header">
+                    <i class="bi bi-activity"></i> Recent Predictions
+                </div>
+                <div class="card-body">
+                    {% if recent_predictions %}
+                        {% for prediction in recent_predictions %}
+                        <div class="prediction-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ prediction.xray.patient.user.get_full_name }}</h6>
+                                    <small class="text-muted">
+                                        {{ prediction.xray.upload_date|date:"M d, Y H:i" }}
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <span class="badge badge-diagnosis {% if prediction.final_diagnosis == 'COVID' %}bg-danger{% elif prediction.final_diagnosis == 'NORMAL' %}bg-success{% else %}bg-warning{% endif %}">
+                                        {{ prediction.final_diagnosis }}
+                                    </span>
+                                    <br>
+                                    <small class="text-muted">{{ prediction.consensus_confidence|floatformat:1 }}% confidence</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted py-4">No recent predictions</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-6 mb-4">
+            <!-- Pending Validations -->
+            <div class="card mb-4">
+                <div class="widget-header">
+                    <i class="bi bi-clipboard-check"></i> Pending Validations
+                    <span class="badge bg-warning float-end">{{ pending_validations.count }}</span>
+                </div>
+                <div class="card-body">
+                    {% if pending_validations %}
+                        {% for prediction in pending_validations %}
+                        <div class="prediction-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ prediction.xray.patient.user.get_full_name }}</h6>
+                                    <small class="text-muted">
+                                        {{ prediction.xray.upload_date|date:"M d, Y H:i" }}
+                                    </small>
+                                </div>
+                                <a href="{% url 'detection:view_results' prediction.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i> Review
+                                </a>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-center text-muted py-4">No pending validations</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions & Notifications -->
+            <div class="card mb-4">
+                <div class="widget-header">
+                    <i class="bi bi-lightning-fill"></i> Quick Actions
+                </div>
+                <div class="card-body text-center">
+                    <a href="{% url 'detection:upload_xray' %}" class="btn btn-primary quick-action-btn">
+                        <i class="bi bi-cloud-upload"></i> Upload X-Ray
+                    </a>
+                    <a href="{% url 'appointments:book_appointment' %}" class="btn btn-success quick-action-btn">
+                        <i class="bi bi-calendar-plus"></i> Schedule Appointment
+                    </a>
+                    <a href="{% url 'detection:prediction_history' %}" class="btn btn-info quick-action-btn">
+                        <i class="bi bi-search"></i> View All Results
+                    </a>
+                    <a href="{% url 'analytics:dashboard' %}" class="btn btn-warning quick-action-btn">
+                        <i class="bi bi-graph-up"></i> View Analytics
+                    </a>
+                </div>
+            </div>
+
+            <!-- Notifications -->
+            <div class="card">
+                <div class="widget-header">
+                    <i class="bi bi-bell-fill"></i> Notifications
+                    {% if unread_notifications %}<span class="badge bg-danger float-end">{{ unread_notifications.count }}</span>{% endif %}
+                </div>
+                <div class="card-body">
+                    {% if unread_notifications %}
+                        {% for notification in unread_notifications %}
+                        <div class="appointment-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1">{{ notification.title }}</h6>
+                                    <p class="mb-1 small">{{ notification.message|truncatewords:20 }}</p>
+                                    <small class="text-muted">{{ notification.created_at|timesince }} ago</small>
+                                </div>
+                                <i class="bi bi-circle-fill text-primary" style="font-size: 0.5rem;"></i>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        <div class="text-center mt-3">
+                            <a href="{% url 'notifications:notification_list' %}" class="btn btn-sm btn-outline-primary">
+                                View All Notifications
+                            </a>
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted py-4">No new notifications</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh dashboard every 60 seconds
+    setTimeout(function() {
+        location.reload();
+    }, 60000);
+</script>
+{% endblock %}

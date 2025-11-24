@@ -8,20 +8,20 @@ from .models import Report, ReportTemplate, BatchReportJob
 from detection.models import Prediction, Patient
 from .forms import ReportGenerationForm, BatchReportForm, ReportTemplateForm
 from .services import ReportGenerator, ExcelExporter, BatchReportProcessor
-from .decorators import doctor_required
+from .decorators import staff_required
 import mimetypes
 
 
 @login_required
-@doctor_required
+@staff_required
 def generate_report(request, prediction_id):
     """
     Generate a PDF report for a specific prediction
     """
     prediction = get_object_or_404(Prediction, id=prediction_id)
 
-    # Check permissions (doctor can view all, patient only their own)
-    if not request.user.profile.is_doctor() and not request.user.profile.is_admin():
+    # Check permissions (staff can view all, patient only their own)
+    if not request.user.profile.is_staff() and not request.user.profile.is_admin():
         if prediction.xray.patient.user != request.user:
             messages.error(request, "You don't have permission to access this report.")
             return redirect('detection:patient_dashboard')
@@ -67,7 +67,7 @@ def view_report(request, report_id):
     report = get_object_or_404(Report, report_id=report_id)
 
     # Check permissions
-    if not request.user.profile.is_doctor() and not request.user.profile.is_admin():
+    if not request.user.profile.is_staff() and not request.user.profile.is_admin():
         if report.patient.user != request.user:
             raise Http404("Report not found")
 
@@ -87,7 +87,7 @@ def download_report(request, report_id):
     report = get_object_or_404(Report, report_id=report_id)
 
     # Check permissions
-    if not request.user.profile.is_doctor() and not request.user.profile.is_admin():
+    if not request.user.profile.is_staff() and not request.user.profile.is_admin():
         if report.patient.user != request.user:
             raise Http404("Report not found")
 
@@ -105,7 +105,7 @@ def download_report(request, report_id):
 
 
 @login_required
-@doctor_required
+@staff_required
 def report_list(request):
     """
     List all reports with filtering and search
@@ -143,7 +143,7 @@ def report_list(request):
 
 
 @login_required
-@doctor_required
+@staff_required
 def batch_generate_reports(request):
     """
     Generate reports for multiple predictions at once
@@ -180,7 +180,7 @@ def batch_generate_reports(request):
 
 
 @login_required
-@doctor_required
+@staff_required
 def batch_job_status(request, job_id):
     """
     View status of batch report generation job
@@ -195,7 +195,7 @@ def batch_job_status(request, job_id):
 
 
 @login_required
-@doctor_required
+@staff_required
 def download_batch_reports(request, job_id):
     """
     Download ZIP file containing all batch reports
@@ -217,7 +217,7 @@ def download_batch_reports(request, job_id):
 
 
 @login_required
-@doctor_required
+@staff_required
 def export_to_excel(request):
     """
     Export predictions data to Excel for research
@@ -251,7 +251,7 @@ def export_to_excel(request):
 
 
 @login_required
-@doctor_required
+@staff_required
 def manage_templates(request):
     """
     Manage report templates (CRUD operations)
@@ -266,7 +266,7 @@ def manage_templates(request):
 
 # API endpoint for AJAX progress checking
 @login_required
-@doctor_required
+@staff_required
 def batch_job_progress_api(request, job_id):
     """
     API endpoint to check batch job progress (for AJAX polling)

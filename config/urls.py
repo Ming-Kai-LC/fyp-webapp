@@ -7,6 +7,7 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.auth import views as auth_views
 from detection import views as detection_views
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
@@ -32,9 +33,14 @@ urlpatterns = [
     # Home page
     path("", detection_views.home, name="home"),
     # Authentication
-    path(
-        "accounts/", include("django.contrib.auth.urls")
-    ),  # Login, logout, password reset
+    path("accounts/login/", detection_views.CustomLoginView.as_view(), name="login"),
+    path("accounts/logout/", auth_views.LogoutView.as_view(), name="logout"),
+    path("accounts/password_change/", auth_views.PasswordChangeView.as_view(), name="password_change"),
+    path("accounts/password_change/done/", auth_views.PasswordChangeDoneView.as_view(), name="password_change_done"),
+    path("accounts/password_reset/", auth_views.PasswordResetView.as_view(), name="password_reset"),
+    path("accounts/password_reset/done/", auth_views.PasswordResetDoneView.as_view(), name="password_reset_done"),
+    path("accounts/reset/<uidb64>/<token>/", auth_views.PasswordResetConfirmView.as_view(), name="password_reset_confirm"),
+    path("accounts/reset/done/", auth_views.PasswordResetCompleteView.as_view(), name="password_reset_complete"),
     path("register/", detection_views.register, name="register"),
     # Detection app URLs
     path("detection/", include("detection.urls")),
@@ -52,6 +58,8 @@ urlpatterns = [
     path("analytics/", include("analytics.urls")),
     # Enhanced Dashboards URLs
     path("dashboards/", include("dashboards.urls")),
+    # Announcements URLs (Test module demonstrating foundation components)
+    path("announcements/", include("announcements.urls")),
 
     # ===== REST API =====
     path("api/v1/", include("api.urls")),

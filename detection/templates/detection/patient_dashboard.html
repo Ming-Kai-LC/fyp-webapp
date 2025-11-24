@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load common_tags %}
 
 {% block title %}Patient Dashboard - COVID-19 Detection{% endblock %}
 
@@ -62,9 +63,7 @@
                             <tr>
                                 <td>{{ prediction.created_at|date:"Y-m-d H:i" }}</td>
                                 <td>
-                                    <span class="badge bg-{{ prediction.final_diagnosis == 'COVID' and 'danger' or 'success' }}">
-                                        {{ prediction.final_diagnosis }}
-                                    </span>
+                                    {% diagnosis_badge prediction.final_diagnosis %}
                                 </td>
                                 <td>{{ prediction.consensus_confidence|floatformat:1 }}%</td>
                                 <td>

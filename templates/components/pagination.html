@@ -1,0 +1,84 @@
+{% comment %}
+Reusable pagination component for Bootstrap 5.
+
+Usage:
+    {% load common_tags %}
+    {% render_pagination page_obj %}
+
+Parameters from template tag:
+    - page_obj: Django Paginator page object
+    - page_numbers: Range of page numbers to display
+    - show_first: Whether to show "First" button
+    - show_last: Whether to show "Last" button
+{% endcomment %}
+
+{% if page_obj and page_obj.paginator.num_pages > 1 %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% comment %} Previous button {% endcomment %}
+        <li class="page-item {% if not page_obj.has_previous %}disabled{% endif %}">
+            {% if page_obj.has_previous %}
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            {% else %}
+                <span class="page-link" aria-label="Previous">
+                    <span aria-hidden="true">&laquo;</span>
+                </span>
+            {% endif %}
+        </li>
+
+        {% comment %} First page button {% endcomment %}
+        {% if show_first %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1">1</a>
+            </li>
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+        {% endif %}
+
+        {% comment %} Page number buttons {% endcomment %}
+        {% for page_num in page_numbers %}
+            <li class="page-item {% if page_num == page_obj.number %}active{% endif %}">
+                {% if page_num == page_obj.number %}
+                    <span class="page-link">
+                        {{ page_num }}
+                        <span class="visually-hidden">(current)</span>
+                    </span>
+                {% else %}
+                    <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                {% endif %}
+            </li>
+        {% endfor %}
+
+        {% comment %} Last page button {% endcomment %}
+        {% if show_last %}
+            <li class="page-item disabled">
+                <span class="page-link">...</span>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">{{ page_obj.paginator.num_pages }}</a>
+            </li>
+        {% endif %}
+
+        {% comment %} Next button {% endcomment %}
+        <li class="page-item {% if not page_obj.has_next %}disabled{% endif %}">
+            {% if page_obj.has_next %}
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            {% else %}
+                <span class="page-link" aria-label="Next">
+                    <span aria-hidden="true">&raquo;</span>
+                </span>
+            {% endif %}
+        </li>
+    </ul>
+
+    {% comment %} Page info {% endcomment %}
+    <div class="text-center text-muted small mt-2">
+        Showing {{ page_obj.start_index }}-{{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+    </div>
+</nav>
+{% endif %}

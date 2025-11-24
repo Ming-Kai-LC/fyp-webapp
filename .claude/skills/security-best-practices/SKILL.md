@@ -460,6 +460,713 @@ class SecurityTests(TestCase):
         self.assertEqual(results.count(), 0)
 ```
 
+---
+
+## Healthcare-Grade Security Requirements
+
+### PHI (Protected Health Information) Handling
+
+**What is PHI in this application:**
+- Patient names, IC numbers, contact information
+- Medical history and diagnoses
+- X-ray images
+- Prediction results
+- Appointment records
+- Any data that can identify a patient
+
+**PHI Protection Rules:**
+
+```python
+# models.py - Always use FullAuditModel for PHI
+from common.models import FullAuditModel
+
+class Patient(FullAuditModel):  # ✅ Audit trail for all PHI access
+    """
+    Contains PHI - requires full audit logging
+    Auto gets: created_at, updated_at, created_by, updated_by,
+               is_deleted, deleted_at, deleted_by
+    """
+    name = models.CharField(max_length=200)
+    ic_number = models.CharField(max_length=20)  # Consider encryption
+    phone = models.CharField(max_length=15)
+    email = models.EmailField()
+    date_of_birth = models.DateField()
+    medical_history = models.TextField()
+
+    class Meta:
+        permissions = [
+            ("view_all_patients", "Can view all patients"),
+            ("export_patient_data", "Can export patient data"),
+            ("anonymize_patient_data", "Can anonymize patient data"),
+        ]
+```
+
+### Encryption at Rest (Production)
+
+**For sensitive fields (IC numbers, medical record numbers):**
+
+```python
+# Install: pip install django-encrypted-model-fields
+from encrypted_model_fields.fields import EncryptedCharField
+
+class Patient(FullAuditModel):
+    # Encrypted fields
+    ic_number = EncryptedCharField(max_length=20)  # ✅ Encrypted in database
+
+    # Non-sensitive fields (plain text OK)
+    age = models.IntegerField()
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES)
+
+# settings.py
+# Store encryption key in environment variable, NOT in code
+FIELD_ENCRYPTION_KEY = config('FIELD_ENCRYPTION_KEY')  # 32-byte Fernet key
+```
+
+**Generating encryption key:**
+```python
+# Run once to generate key, store in .env
+from cryptography.fernet import Fernet
+key = Fernet.generate_key()
+print(key.decode())  # Add to .env as FIELD_ENCRYPTION_KEY
+```
+
+### Access Audit Logging (CRITICAL)
+
+**Comprehensive audit trail for all PHI access:**
+
+```python
+# audit/models.py
+from common.models import TimeStampedModel
+
+class AccessLog(TimeStampedModel):
+    """Log every access to patient data - HIPAA requirement"""
+
+    ACTION_CHOICES = [
+        ('VIEW', 'Viewed patient record'),
+        ('CREATE', 'Created patient record'),
+        ('UPDATE', 'Updated patient record'),
+        ('DELETE', 'Deleted patient record'),
+        ('EXPORT', 'Exported patient data'),
+        ('PRINT', 'Printed patient data'),
+        ('UPLOAD_XRAY', 'Uploaded X-ray'),
+        ('VIEW_XRAY', 'Viewed X-ray'),
+        ('CREATE_PREDICTION', 'Created prediction'),
+        ('VIEW_PREDICTION', 'Viewed prediction'),
+        ('VALIDATE_PREDICTION', 'Validated prediction'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    action = models.CharField(max_length=50, choices=ACTION_CHOICES)
+    patient = models.ForeignKey('detection.Patient', on_delete=models.CASCADE, null=True)
+    resource_type = models.CharField(max_length=50)  # 'Patient', 'XRay', 'Prediction'
+    resource_id = models.IntegerField()
+    ip_address = models.GenericIPAddressField()
+    user_agent = models.TextField()
+    details = models.JSONField(default=dict)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['patient', '-created_at']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action', '-created_at']),
+        ]
+
+# audit/middleware.py
+class AuditMiddleware:
+    """Automatically log PHI access"""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Log if accessing PHI views
+        if self._is_phi_access(request):
+            self._log_access(request, response)
+
+        return response
+
+    def _is_phi_access(self, request):
+        """Check if URL accesses PHI"""
+        phi_patterns = [
+            '/detection/patient/',
+            '/detection/xray/',
+            '/detection/prediction/',
+            '/api/patients/',
+            '/api/predictions/',
+        ]
+        return any(pattern in request.path for pattern in phi_patterns)
+
+    def _log_access(self, request, response):
+        """Log the access"""
+        if request.user.is_authenticated and response.status_code == 200:
+            AccessLog.objects.create(
+                user=request.user,
+                action='VIEW',
+                resource_type=self._get_resource_type(request.path),
+                resource_id=self._extract_resource_id(request.path),
+                ip_address=self._get_client_ip(request),
+                user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+                details={'path': request.path, 'method': request.method}
+            )
+```
+
+### Data Retention & Destruction Policies
+
+```python
+# management/commands/apply_retention_policy.py
+from django.core.management.base import BaseCommand
+from django.utils import timezone
+from datetime import timedelta
+from audit.models import AccessLog
+
+class Command(BaseCommand):
+    help = 'Apply data retention policies'
+
+    def handle(self, *args, **options):
+        # Retention periods (adjust based on regulations)
+        policies = {
+            'access_logs': timedelta(days=365 * 7),  # 7 years
+            'predictions': timedelta(days=365 * 10),  # 10 years
+            'xrays': timedelta(days=365 * 10),  # 10 years
+            'patients_inactive': timedelta(days=365 * 5),  # 5 years since last visit
+        }
+
+        # Delete old access logs
+        cutoff = timezone.now() - policies['access_logs']
+        deleted_logs = AccessLog.objects.filter(created_at__lt=cutoff).delete()
+        self.stdout.write(f'Deleted {deleted_logs[0]} old access logs')
+
+        # Archive old predictions (soft delete)
+        cutoff = timezone.now() - policies['predictions']
+        old_predictions = Prediction.objects.filter(
+            created_at__lt=cutoff,
+            is_deleted=False
+        )
+        count = old_predictions.update(
+            is_deleted=True,
+            deleted_at=timezone.now(),
+            deleted_by=None  # Automated deletion
+        )
+        self.stdout.write(f'Archived {count} old predictions')
+```
+
+### Secure Data Export & Anonymization
+
+```python
+# reporting/services.py
+import hashlib
+from typing import List, Dict, Any
+
+class SecureExportService:
+    """Handle secure export of patient data"""
+
+    @staticmethod
+    def export_for_research(prediction_ids: List[int]) -> List[Dict[str, Any]]:
+        """
+        Export anonymized data for research.
+        Removes all PII, keeps medical data.
+        """
+        predictions = Prediction.objects.filter(
+            id__in=prediction_ids
+        ).select_related('xray__patient')
+
+        anonymized_data = []
+        for pred in predictions:
+            # Create anonymous patient ID (consistent hash)
+            patient_hash = hashlib.sha256(
+                f"patient_{pred.xray.patient.id}".encode()
+            ).hexdigest()[:16]
+
+            anonymized_data.append({
+                'anonymous_patient_id': patient_hash,
+                'age': pred.xray.patient.age,
+                'gender': pred.xray.patient.gender,
+                'diagnosis': pred.final_diagnosis,
+                'confidence': pred.consensus_confidence,
+                'model_results': {
+                    'crossvit': pred.crossvit_confidence,
+                    'resnet50': pred.resnet50_confidence,
+                    'densenet121': pred.densenet121_confidence,
+                },
+                'created_at': pred.created_at.isoformat(),
+                # NO: name, IC, contact, address, etc.
+            })
+
+        # Log export for audit
+        AccessLog.objects.create(
+            user=get_current_user(),
+            action='EXPORT',
+            resource_type='Prediction',
+            resource_id=0,  # Bulk export
+            ip_address=get_current_ip(),
+            details={
+                'count': len(anonymized_data),
+                'anonymized': True,
+            }
+        )
+
+        return anonymized_data
+
+    @staticmethod
+    def export_for_compliance(patient_id: int, requesting_user: User) -> Dict[str, Any]:
+        """
+        Export complete patient data for compliance/legal request.
+        Requires admin permission and is fully audited.
+        """
+        # Verify permission
+        if not requesting_user.has_perm('detection.export_patient_data'):
+            raise PermissionDenied("Not authorized to export patient data")
+
+        patient = Patient.objects.get(id=patient_id)
+
+        # Full data export (includes PII)
+        data = {
+            'patient': {
+                'id': patient.id,
+                'name': patient.name,
+                'ic_number': patient.get_ic_number() if hasattr(patient, 'get_ic_number') else patient.ic_number,
+                'phone': patient.phone,
+                'email': patient.email,
+                'date_of_birth': patient.date_of_birth.isoformat(),
+                'medical_history': patient.medical_history,
+            },
+            'xrays': [
+                {
+                    'id': xray.id,
+                    'uploaded_at': xray.created_at.isoformat(),
+                    'image_path': xray.original_image.url,
+                }
+                for xray in patient.xrays.all()
+            ],
+            'predictions': [
+                {
+                    'id': pred.id,
+                    'diagnosis': pred.final_diagnosis,
+                    'confidence': pred.consensus_confidence,
+                    'created_at': pred.created_at.isoformat(),
+                }
+                for xray in patient.xrays.all()
+                for pred in xray.predictions.all()
+            ],
+            'export_metadata': {
+                'exported_by': requesting_user.username,
+                'exported_at': timezone.now().isoformat(),
+                'export_reason': 'Compliance request',
+            }
+        }
+
+        # Log export (CRITICAL for compliance)
+        AccessLog.objects.create(
+            user=requesting_user,
+            action='EXPORT',
+            patient=patient,
+            resource_type='Patient',
+            resource_id=patient.id,
+            ip_address=get_current_ip(),
+            details={
+                'full_export': True,
+                'includes_phi': True,
+            }
+        )
+
+        return data
+```
+
+### Secure Session Management (Healthcare)
+
+```python
+# settings.py - Healthcare-specific session settings
+
+# Session expires after 15 minutes of inactivity
+SESSION_COOKIE_AGE = 900  # 15 minutes
+
+# Session expires when browser closes
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True
+
+# Prevent session fixation
+SESSION_COOKIE_SECURE = True  # HTTPS only
+SESSION_COOKIE_HTTPONLY = True  # No JavaScript access
+SESSION_COOKIE_SAMESITE = 'Strict'
+
+# Regenerate session ID after login
+def login_view(request):
+    # ... authentication logic ...
+    if user.is_authenticated:
+        # Regenerate session ID to prevent session fixation
+        request.session.cycle_key()
+        login(request, user)
+
+        # Log login for audit
+        AccessLog.objects.create(
+            user=user,
+            action='LOGIN',
+            ip_address=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+        )
+```
+
+### Incident Response Procedures
+
+**Security incident handling:**
+
+```python
+# security/incident_response.py
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+
+security_logger = logging.getLogger('security')
+
+class IncidentResponse:
+    """Handle security incidents"""
+
+    @staticmethod
+    def report_suspicious_access(user: User, patient: Patient, reason: str):
+        """Report suspicious access pattern"""
+
+        # Log incident
+        security_logger.warning(
+            f"Suspicious access: User {user.username} accessed "
+            f"Patient {patient.id} - Reason: {reason}"
+        )
+
+        # Create audit record
+        AccessLog.objects.create(
+            user=user,
+            action='SUSPICIOUS_ACCESS',
+            patient=patient,
+            resource_type='Patient',
+            resource_id=patient.id,
+            ip_address=get_current_ip(),
+            details={
+                'reason': reason,
+                'flagged': True,
+                'requires_review': True,
+            }
+        )
+
+        # Notify security admin
+        if settings.SECURITY_ADMIN_EMAIL:
+            send_mail(
+                subject=f'[SECURITY ALERT] Suspicious Access Detected',
+                message=f'User {user.username} accessed Patient {patient.id}\nReason: {reason}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.SECURITY_ADMIN_EMAIL],
+                fail_silently=False,
+            )
+
+    @staticmethod
+    def report_data_breach(affected_patients: List[Patient], description: str):
+        """Report potential data breach"""
+
+        # Critical security log
+        security_logger.critical(
+            f"POTENTIAL DATA BREACH: {len(affected_patients)} patients affected - {description}"
+        )
+
+        # Create incident record
+        Incident.objects.create(
+            incident_type='DATA_BREACH',
+            severity='CRITICAL',
+            description=description,
+            affected_patient_count=len(affected_patients),
+            reported_at=timezone.now(),
+            status='UNDER_INVESTIGATION',
+        )
+
+        # Immediate notification to admins
+        if settings.SECURITY_ADMIN_EMAIL:
+            send_mail(
+                subject=f'[CRITICAL] Potential Data Breach Detected',
+                message=f'Affected patients: {len(affected_patients)}\n{description}',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[settings.SECURITY_ADMIN_EMAIL],
+                fail_silently=False,
+            )
+
+# Example usage in views
+def patient_detail(request, patient_id):
+    patient = get_object_or_404(Patient, id=patient_id)
+
+    # Check if user should have access
+    if request.user.profile.is_patient():
+        if patient.user != request.user:
+            # Patient trying to access another patient's record
+            IncidentResponse.report_suspicious_access(
+                user=request.user,
+                patient=patient,
+                reason="Patient attempted to access another patient's record"
+            )
+            raise PermissionDenied("Access denied")
+
+    # Normal access - still log it
+    AccessLog.objects.create(
+        user=request.user,
+        action='VIEW',
+        patient=patient,
+        resource_type='Patient',
+        resource_id=patient.id,
+        ip_address=get_client_ip(request),
+    )
+
+    return render(request, 'patient_detail.html', {'patient': patient})
+```
+
+### Security Testing for Healthcare Apps
+
+```python
+# tests/test_healthcare_security.py
+from django.test import TestCase, Client
+from django.contrib.auth.models import User
+from detection.models import Patient, XRayImage, Prediction
+from audit.models import AccessLog
+
+class HealthcareSecurityTests(TestCase):
+    """Comprehensive security tests for healthcare data"""
+
+    def setUp(self):
+        # Create test users
+        self.admin = User.objects.create_user('admin', password='admin123')
+        self.admin.profile.role = 'admin'
+        self.admin.profile.save()
+
+        self.staff = User.objects.create_user('staff', password='staff123')
+        self.staff.profile.role = 'staff'
+        self.staff.profile.save()
+
+        self.patient1 = User.objects.create_user('patient1', password='pass123')
+        self.patient1.profile.role = 'patient'
+        self.patient1.profile.save()
+
+        self.patient2 = User.objects.create_user('patient2', password='pass123')
+        self.patient2.profile.role = 'patient'
+        self.patient2.profile.save()
+
+        # Create test patient records
+        self.patient_record1 = Patient.objects.create(
+            user=self.patient1,
+            name="Test Patient 1",
+            age=30,
+            gender='M'
+        )
+
+        self.patient_record2 = Patient.objects.create(
+            user=self.patient2,
+            name="Test Patient 2",
+            age=25,
+            gender='F'
+        )
+
+    def test_patient_cannot_view_other_patient_data(self):
+        """CRITICAL: Patient isolation"""
+        self.client.login(username='patient1', password='pass123')
+
+        # Try to access another patient's data
+        response = self.client.get(f'/detection/patient/{self.patient_record2.id}/')
+
+        self.assertEqual(response.status_code, 403)  # Forbidden
+
+        # Verify suspicious access was logged
+        suspicious_logs = AccessLog.objects.filter(
+            action='SUSPICIOUS_ACCESS',
+            user=self.patient1
+        )
+        self.assertTrue(suspicious_logs.exists())
+
+    def test_staff_access_is_logged(self):
+        """CRITICAL: All staff access must be audited"""
+        self.client.login(username='staff', password='staff123')
+
+        # Access patient data
+        response = self.client.get(f'/detection/patient/{self.patient_record1.id}/')
+
+        # Verify access was logged
+        access_logs = AccessLog.objects.filter(
+            user=self.staff,
+            patient=self.patient_record1,
+            action='VIEW'
+        )
+        self.assertTrue(access_logs.exists())
+        self.assertGreater(access_logs.count(), 0)
+
+    def test_phi_encryption_at_rest(self):
+        """Test sensitive data encryption"""
+        # If using encrypted fields
+        if hasattr(self.patient_record1, 'ic_number'):
+            # IC should be encrypted in database
+            from django.db import connection
+            with connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT ic_number FROM detection_patient WHERE id = %s",
+                    [self.patient_record1.id]
+                )
+                raw_data = cursor.fetchone()[0]
+
+                # Should NOT be plain text
+                self.assertNotEqual(raw_data, self.patient_record1.ic_number)
+
+    def test_data_export_requires_permission(self):
+        """Test data export is restricted"""
+        self.client.login(username='staff', password='staff123')
+
+        # Try to export patient data without permission
+        response = self.client.post('/api/export-patient/', {
+            'patient_id': self.patient_record1.id
+        })
+
+        self.assertEqual(response.status_code, 403)  # Forbidden
+
+    def test_session_expires_after_inactivity(self):
+        """Test session timeout for security"""
+        self.client.login(username='staff', password='staff123')
+
+        # Simulate session expiry
+        from django.conf import settings
+        session = self.client.session
+        session.set_expiry(-1)  # Expired
+        session.save()
+
+        # Try to access protected resource
+        response = self.client.get('/detection/dashboard/')
+
+        # Should redirect to login
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('/accounts/login/', response.url)
+
+    def test_anonymized_export_removes_phi(self):
+        """Test anonymization removes all PII"""
+        from reporting.services import SecureExportService
+
+        # Create prediction
+        xray = XRayImage.objects.create(patient=self.patient_record1)
+        prediction = Prediction.objects.create(xray=xray, final_diagnosis='COVID')
+
+        # Export anonymized data
+        anonymized = SecureExportService.export_for_research([prediction.id])
+
+        # Verify NO PII present
+        self.assertEqual(len(anonymized), 1)
+        data = anonymized[0]
+
+        self.assertNotIn('name', data)
+        self.assertNotIn('ic_number', data)
+        self.assertNotIn('phone', data)
+        self.assertNotIn('email', data)
+        self.assertIn('age', data)  # OK - not identifiable
+        self.assertIn('gender', data)  # OK - not identifiable
+        self.assertIn('diagnosis', data)  # OK - medical data
+```
+
+### Healthcare Security Checklist
+
+**Before deploying to production:**
+
+**PHI Protection:**
+- ✅ All PHI models use `FullAuditModel` (audit trail)
+- ✅ Sensitive fields encrypted at rest (IC numbers, medical record numbers)
+- ✅ All PHI access is logged in `AccessLog`
+- ✅ Patient isolation enforced (patients cannot see other patients)
+- ✅ Object-level permissions implemented
+
+**Audit & Compliance:**
+- ✅ Comprehensive access logging for all PHI access
+- ✅ Audit logs retained for minimum 7 years
+- ✅ User actions logged (VIEW, CREATE, UPDATE, DELETE, EXPORT)
+- ✅ IP address and user agent logged
+- ✅ Failed access attempts logged
+
+**Data Security:**
+- ✅ HTTPS enforced in production
+- ✅ Session timeout configured (15 minutes)
+- ✅ Session expires on browser close
+- ✅ Encryption keys stored in environment variables (not code)
+- ✅ Database backups encrypted
+- ✅ File uploads scanned for malware
+
+**Access Control:**
+- ✅ Role-based access control enforced
+- ✅ Admin-only functions restricted
+- ✅ Staff can only perform job-related tasks
+- ✅ Patients can only access own data
+- ✅ Suspicious access patterns detected and logged
+
+**Data Retention & Destruction:**
+- ✅ Retention policies documented
+- ✅ Automated retention policy enforcement
+- ✅ Secure deletion (soft delete with audit)
+- ✅ Data anonymization for research exports
+
+**Incident Response:**
+- ✅ Security incident logging implemented
+- ✅ Automated alerts for suspicious activity
+- ✅ Security admin notification configured
+- ✅ Breach notification procedures documented
+
+**Testing:**
+- ✅ Security tests for patient isolation
+- ✅ Security tests for access logging
+- ✅ Security tests for data export restrictions
+- ✅ Security tests for anonymization
+- ✅ Penetration testing completed
+
+---
+
+## Security Monitoring & Alerts
+
+**Real-time security monitoring:**
+
+```python
+# security/monitoring.py
+from django.core.cache import cache
+from django.conf import settings
+from datetime import timedelta
+
+class SecurityMonitor:
+    """Monitor for suspicious security patterns"""
+
+    @staticmethod
+    def check_unusual_access_pattern(user: User, patient: Patient) -> bool:
+        """Detect unusual access patterns"""
+
+        # Check if user is accessing many different patients rapidly
+        cache_key = f'patient_access_{user.id}'
+        accessed_patients = cache.get(cache_key, set())
+        accessed_patients.add(patient.id)
+        cache.set(cache_key, accessed_patients, 300)  # 5 minutes
+
+        # Alert if accessing > 10 different patients in 5 minutes
+        if len(accessed_patients) > 10:
+            IncidentResponse.report_suspicious_access(
+                user=user,
+                patient=patient,
+                reason=f"User accessed {len(accessed_patients)} different patients in 5 minutes"
+            )
+            return True
+
+        return False
+
+    @staticmethod
+    def check_off_hours_access(user: User) -> bool:
+        """Detect access outside business hours"""
+        from datetime import datetime
+
+        current_hour = datetime.now().hour
+
+        # Business hours: 8 AM - 6 PM
+        if current_hour < 8 or current_hour > 18:
+            security_logger.warning(
+                f"Off-hours access: User {user.username} at {datetime.now()}"
+            )
+            return True
+
+        return False
+```
+
+---
+
 ## Auto-Apply This Skill When:
 - Creating new views or forms
 - Handling user input
@@ -469,3 +1176,14 @@ class SecurityTests(TestCase):
 - Creating APIs
 - Modifying database models
 - Deploying to production
+- Implementing data export features
+- Creating audit logs
+- Handling PHI (Protected Health Information)
+- Implementing session management
+
+---
+
+**Last Updated:** 2025-11-24
+**Version:** 2.0.0 (Enhanced with Healthcare-Grade Security)
+**Status:** Active
+**Compliance:** OWASP Top 10 + Healthcare-Grade (HIPAA-like) Security

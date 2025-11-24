@@ -19,9 +19,9 @@ from .models import DashboardPreference, DashboardWidget
 
 
 @login_required
-def enhanced_doctor_dashboard(request):
+def enhanced_staff_dashboard(request):
     """
-    Enhanced doctor dashboard with all widgets
+    Enhanced staff dashboard with all widgets
     """
     # Today's appointments
     today = timezone.now().date()
@@ -68,10 +68,10 @@ def enhanced_doctor_dashboard(request):
         'pending_count': pending_count,
         'validation_rate': validation_rate,
         'unread_notifications': unread_notifications,
-        'dashboard_type': 'doctor',
+        'dashboard_type': 'staff',
     }
 
-    return render(request, 'dashboards/doctor_dashboard_enhanced.html', context)
+    return render(request, 'dashboards/staff_dashboard_enhanced.html', context)
 
 
 @login_required
