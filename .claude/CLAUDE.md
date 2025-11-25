@@ -185,7 +185,41 @@ The following skills define the fundamental rules and patterns for this project.
 
 ---
 
-### 9. Performance Optimization
+### 9. Image Processing & Display ⭐ **MEDICAL IMAGING**
+
+**Skill:** `image-processing`
+
+**Key Principles:**
+- Comprehensive server-side validation (extension, MIME, size, dimensions)
+- Client-side validation with preview before upload
+- CLAHE enhancement for X-ray contrast improvement
+- EXIF orientation auto-correction
+- Thumbnail generation for performance
+- Interactive viewer with zoom, pan, rotation
+- Side-by-side comparison (original vs processed)
+- Window/Level presets for medical imaging
+- Lazy loading for image lists
+
+**Apply this skill when:**
+- Implementing image/file upload functionality
+- Displaying X-ray images or medical images
+- Building image viewers or galleries
+- Processing images server-side (enhancement, rotation, crop)
+- Adding image comparison features
+
+**What This Skill Provides:**
+- `ImageValidator` class for server-side validation
+- `ImageUploadValidator` class for client-side validation
+- `ImageProcessingService` for preprocessing pipeline
+- `WindowLevelService` for medical imaging presets
+- `image_viewer.html` component for interactive display
+- Complete validation and display checklist
+
+**Result:** Secure image handling, optimal preprocessing for ML, excellent viewing experience with medical imaging standards.
+
+---
+
+### 10. Performance Optimization
 
 **Note:** This has been consolidated into `full-stack-django-patterns` skill (Section 15)
 
@@ -999,13 +1033,14 @@ class MyViewSet(viewsets.ModelViewSet):
 
 ---
 
-**Last Updated:** 2025-11-24
+**Last Updated:** 2025-11-25
 **Project Version:** 1.0.0
 **Django Version:** 5.1
 **Python Version:** 3.11+
-**Total Skills:** 10 active (consolidated from 16 original)
+**Total Skills:** 11 active (consolidated from 16 original)
 
 **Recent Updates:**
+- **2025-11-25:** Added new **Image Processing & Display** skill - Comprehensive patterns for image validation, preprocessing (CLAHE, rotation, crop), and interactive display (zoom, pan, comparison, Window/Level presets)
 - **2025-11-24:** Added new **Dual-Layer Validation** skill - Enforces both server-side and client-side validation for all user inputs (defense in depth)
 - **2025-11-23:** Skills consolidation V2 - Reduced from 16 to 9 skills (44% reduction) by merging overlapping concerns:
   - `virtual-environment` merged into `code-quality-standards`

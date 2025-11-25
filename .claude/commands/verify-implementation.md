@@ -2,6 +2,23 @@
 
 Review the current implementation and verify it follows all project standards.
 
+## Conditional Sections Guide
+
+**Apply these sections based on what the implementation includes:**
+
+| If Implementation Has... | Check These Sections |
+|--------------------------|---------------------|
+| **Forms** | 7, 8, 9 (Validation), 22 (Form Persistence) |
+| **Image/File Upload** | 23, 24, 25 (Image Processing & Display) |
+| **List Views** | 16, 17 (Query Optimization, Pagination) |
+| **AJAX/Dynamic Content** | 19, 20, 21 (Partial Refresh, Scroll, Loading) |
+| **Medical/Patient Data** | 6, 18 (Security, Healthcare UI) |
+| **Date/Time Fields** | 10 (Malaysia Date/Time) |
+
+**Always check:** Sections 1-5 (Foundation), 11-15 (Code Quality, Testing, Files)
+
+---
+
 ## Checklist to Verify
 
 ### 1. Reusable (foundation-components)
@@ -207,6 +224,47 @@ Review the current implementation and verify it follows all project standards.
 - [ ] Multi-step forms persist data across steps (FormWizardPersistence)
 - [ ] localStorage used for non-sensitive drafts, sessionStorage for sensitive forms
 - [ ] File inputs NEVER persisted (only file metadata displayed)
+
+---
+
+### IF HANDLING IMAGES (Sections 23-25)
+
+*Skip these sections if implementation does not handle image upload/display*
+
+### 23. Image Upload & Validation (image-processing)
+- [ ] Server-side validation with `ImageValidator.validate_file()`
+- [ ] Client-side validation with `ImageUploadValidator` class
+- [ ] File type check (extension + MIME type + magic bytes)
+- [ ] File size limit enforced (10MB max for X-rays)
+- [ ] Image dimensions validated (min 224x224 for ML)
+- [ ] Quality assessment with warnings (blur, aspect ratio)
+- [ ] EXIF orientation auto-correction applied
+- [ ] Preview displayed before upload
+- [ ] Progress indicator during upload
+- [ ] Original image preserved (never overwritten)
+
+### 24. Image Processing Pipeline (image-processing)
+- [ ] Use `ImageProcessingService.preprocess_xray()` for X-rays
+- [ ] CLAHE enhancement applied for contrast improvement
+- [ ] Thumbnails generated for list views (150x150)
+- [ ] Processed images stored in `media/xrays/processed/`
+- [ ] Processing errors handled gracefully (fallback to original)
+- [ ] Rotation available (90°, 180°, 270°)
+- [ ] Brightness/contrast adjustment available
+- [ ] Window/Level presets for medical imaging
+
+### 25. Image Display & Viewer (image-processing)
+- [ ] Use `image_viewer.html` component for X-ray display
+- [ ] Dark background for medical image viewing
+- [ ] Zoom controls (buttons + mousewheel + pinch)
+- [ ] Pan/drag enabled for zoomed images
+- [ ] Rotation controls available
+- [ ] Fullscreen capability
+- [ ] Side-by-side comparison (original vs processed)
+- [ ] Responsive images (`img-fluid` class)
+- [ ] Lazy loading for image lists (`loading="lazy"`)
+- [ ] Metadata display (resolution, size, date, uploader)
+- [ ] Keyboard shortcuts documented (+ - 0 r f)
 
 ---
 
@@ -782,4 +840,88 @@ function submitWizard() {
     // Submit allData to server...
     wizardPersistence.clearAll();
 }
+```
+
+### Image Validation - Server-Side
+```python
+# Comprehensive image validation
+from common.validators import ImageValidator
+
+def clean_original_image(self):
+    image = self.cleaned_data.get('original_image')
+    if image:
+        # Validates: extension, MIME type, size, dimensions
+        metadata = ImageValidator.validate_file(image, max_size_mb=10)
+        # Optional: quality assessment
+        quality = ImageValidator.assess_quality(image)
+        if quality['warnings']:
+            self._quality_warnings = quality['warnings']
+    return image
+```
+
+### Image Validation - Client-Side
+```javascript
+// Initialize validator
+const validator = new ImageUploadValidator({
+    maxSizeMB: 10,
+    minWidth: 224,
+    minHeight: 224,
+    allowedTypes: ['image/jpeg', 'image/png']
+});
+
+// Validate on file select
+fileInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    const result = await validator.validate(file);
+
+    if (result.isValid) {
+        validator.generatePreview(file, previewImg);
+        fileInput.classList.add('is-valid');
+    } else {
+        showErrors(result.errors);
+        fileInput.classList.add('is-invalid');
+    }
+});
+```
+
+### Image Preprocessing Pipeline
+```python
+from detection.services.image_processing_service import ImageProcessingService
+
+# Complete preprocessing for X-rays
+result = ImageProcessingService.preprocess_xray(
+    image_path=xray.original_image.path,
+    apply_clahe=True,
+    apply_denoise=False
+)
+# Returns: processed_path, thumbnail_path, steps_applied
+```
+
+### Image Viewer Component
+```django
+{# Interactive X-Ray viewer with zoom, pan, rotation #}
+{% include 'components/image_viewer.html' with
+   image_url=xray.original_image.url
+   processed_url=xray.processed_image.url
+   metadata=xray_metadata
+%}
+```
+
+### Lazy Loading Images
+```html
+<!-- Use native lazy loading + Intersection Observer fallback -->
+<img src="{{ xray.thumbnail.url }}"
+     data-src="{{ xray.original_image.url }}"
+     class="lazy-image img-fluid"
+     loading="lazy"
+     alt="X-Ray">
+```
+
+### Window/Level Presets (Medical Imaging)
+```python
+from detection.services.image_processing_service import WindowLevelService
+
+# Apply preset for specific view
+processed = WindowLevelService.apply_preset(image_path, 'lung')
+# Presets: 'default', 'lung', 'bone', 'mediastinum'
 ```
