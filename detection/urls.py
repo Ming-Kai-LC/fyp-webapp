@@ -27,8 +27,8 @@ urlpatterns = [
         views.add_doctor_notes,
         name="add_doctor_notes",
     ),
-    # User profile (all roles)
-    path("profile/", views.user_profile, name="user_profile"),
+    # User profile (all roles) - Uses class-based view
+    path("profile/", views.UserProfileView.as_view(), name="user_profile"),
     # API endpoints
     path("api/models/", views.api_model_info, name="api_model_info"),
 ]
