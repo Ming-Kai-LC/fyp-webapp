@@ -27,8 +27,8 @@ urlpatterns = [
         views.add_doctor_notes,
         name="add_doctor_notes",
     ),
-    # Patient profile
-    path("patient/profile/", views.patient_profile, name="patient_profile"),
+    # User profile (all roles)
+    path("profile/", views.user_profile, name="user_profile"),
     # API endpoints
     path("api/models/", views.api_model_info, name="api_model_info"),
 ]

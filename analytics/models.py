@@ -1,11 +1,13 @@
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
+from common.models import TimeStampedModel, TimeStampedAuditableModel
 
 
-class AnalyticsSnapshot(models.Model):
+class AnalyticsSnapshot(TimeStampedModel):
     """
     Daily/weekly/monthly snapshots of key metrics
+    Inherits: created_at, updated_at from TimeStampedModel
     """
     PERIOD_TYPES = (
         ('daily', 'Daily'),
@@ -35,8 +37,6 @@ class AnalyticsSnapshot(models.Model):
     # Model accuracy (if validation data available)
     model_accuracy = models.JSONField(null=True, blank=True)
 
-    created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ['-snapshot_date']
         unique_together = ['period_type', 'snapshot_date']
@@ -45,9 +45,10 @@ class AnalyticsSnapshot(models.Model):
         return f"{self.get_period_type_display()} Snapshot - {self.snapshot_date}"
 
 
-class ModelPerformanceMetric(models.Model):
+class ModelPerformanceMetric(TimeStampedModel):
     """
     Track individual model performance over time
+    Inherits: created_at, updated_at from TimeStampedModel
     """
     MODEL_CHOICES = (
         ('crossvit', 'CrossViT'),
@@ -79,8 +80,6 @@ class ModelPerformanceMetric(models.Model):
         help_text="How often this model agrees with consensus"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ['-date']
         unique_together = ['model_name', 'date']
@@ -89,9 +88,10 @@ class ModelPerformanceMetric(models.Model):
         return f"{self.get_model_name_display()} - {self.date}"
 
 
-class CustomReport(models.Model):
+class CustomReport(TimeStampedAuditableModel):
     """
     User-defined custom analytics reports
+    Inherits: created_at, updated_at, created_by, updated_by
     """
     REPORT_TYPES = (
         ('prediction_trends', 'Prediction Trends'),
@@ -119,9 +119,7 @@ class CustomReport(models.Model):
         ]
     )
 
-    # Ownership
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Ownership - created_by inherited from TimeStampedAuditableModel
     is_public = models.BooleanField(default=False)
 
     class Meta:
@@ -131,9 +129,10 @@ class CustomReport(models.Model):
         return self.name
 
 
-class DataExport(models.Model):
+class DataExport(TimeStampedAuditableModel):
     """
     Track data exports for research
+    Inherits: created_at (exported_at), updated_at, created_by (exported_by), updated_by
     """
     EXPORT_TYPES = (
         ('predictions', 'Predictions Data'),
@@ -143,8 +142,7 @@ class DataExport(models.Model):
     )
 
     export_type = models.CharField(max_length=30, choices=EXPORT_TYPES)
-    exported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    exported_at = models.DateTimeField(auto_now_add=True)
+    # Note: exported_by is now created_by, exported_at is now created_at
 
     # Configuration
     filters_applied = models.JSONField(null=True, blank=True)
@@ -163,7 +161,7 @@ class DataExport(models.Model):
     anonymized = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['-exported_at']
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_export_type_display()} - {self.exported_at.strftime('%Y-%m-%d')}"
+        return f"{self.get_export_type_display()} - {self.created_at.strftime('%Y-%m-%d')}"

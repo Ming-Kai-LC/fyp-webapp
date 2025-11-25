@@ -15,7 +15,6 @@
       "AskUserQuestion(*)",
       "Skill(*)",
       "SlashCommand(*)",
-      "ExitPlanMode",
       "mcp__ide__getDiagnostics",
       "mcp__ide__executeCode",
       "mcp__*",

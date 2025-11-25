@@ -797,7 +797,33 @@ def handle_upload(file, prefix='xray'):
 - ✅ NO duplicated validation logic (use common utilities)
 - ✅ NO custom timestamp fields (inherit TimeStampedModel)
 
-**Enforcement:** The `module-creation-lifecycle` skill automatically enforces all foundation file usage. Violations will trigger quality checklist failures.
+### Automated Enforcement Mechanisms
+
+The following automated mechanisms ensure foundation-components compliance:
+
+**1. Django System Checks (`common/checks.py`)**
+Runs automatically during `manage.py check`, `runserver`, and `migrate`:
+- `common.W001`: Missing `created_at`/`updated_at` fields (must inherit TimeStampedModel)
+- `common.W002`: Missing `all_objects` manager for soft-delete models
+- `common.W003`: Inconsistent audit fields (created_by without updated_by)
+- `common.W004`: Incomplete soft-delete fields
+
+**2. Pre-commit Hooks (`.pre-commit-config.yaml`)**
+Install: `pip install pre-commit && pre-commit install`
+- `django-check`: Runs Django system checks before every commit
+- `django-migrations-check`: Ensures no missing migrations
+- `black`, `isort`, `flake8`: Code quality enforcement
+- `bandit`: Security vulnerability scanning
+
+**3. CI/CD Pipeline (GitHub Actions)**
+- Runs full test suite on every push/PR
+- Enforces minimum 80% code coverage
+- Blocks merge if system checks fail
+
+**Result:** Any model created without inheriting from foundation base classes will:
+1. Trigger warnings during local development (`manage.py runserver`)
+2. Block git commits (pre-commit hooks)
+3. Fail CI/CD pipeline (GitHub Actions)
 
 ---
 

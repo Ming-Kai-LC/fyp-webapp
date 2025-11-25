@@ -243,6 +243,127 @@ class AnnouncementForm(forms.ModelForm):
 
 ---
 
+### 3.1 Malaysia Date/Time Standards
+
+**MANDATORY** - All date/time must use Malaysia timezone (Asia/Kuala_Lumpur)
+
+#### Django Settings (MANDATORY - Already Configured)
+
+```python
+# config/settings.py
+
+# Timezone
+TIME_ZONE = "Asia/Kuala_Lumpur"  # Malaysian timezone
+USE_TZ = True  # Use timezone-aware datetimes
+
+# Malaysia Date/Time Formats (Override Django defaults)
+DATE_FORMAT = "d M Y"  # e.g., "22 Nov 2025"
+DATETIME_FORMAT = "d M Y, g:i A"  # e.g., "22 Nov 2025, 2:30 PM"
+SHORT_DATE_FORMAT = "d/m/Y"  # e.g., "22/11/2025"
+SHORT_DATETIME_FORMAT = "d/m/Y g:i A"  # e.g., "22/11/2025 2:30 PM"
+TIME_FORMAT = "g:i A"  # e.g., "2:30 PM"
+
+# Date input formats for forms
+DATE_INPUT_FORMATS = [
+    "%Y-%m-%d",  # HTML5: 2025-11-22
+    "%d/%m/%Y",  # Malaysian: 22/11/2025
+    "%d-%m-%Y",  # Alternative: 22-11-2025
+]
+
+# Disable localization to ensure consistent format
+USE_L10N = False
+```
+
+**IMPORTANT:** `USE_L10N = False` ensures Django uses OUR formats, not browser locale.
+
+#### Date/Time Display Formats
+
+| Format | Pattern | Example Output |
+|--------|---------|----------------|
+| **DateTime** | `d M Y, g:i A` | "22 Nov 2025, 2:30 PM" |
+| **Date** | `d M Y` | "22 Nov 2025" |
+| **Time** | `g:i A` | "2:30 PM" |
+| **ISO** | `Y-m-d H:i:s` | "2025-11-22 14:30:00" |
+
+#### Python - Always Use `timezone.now()`
+
+```python
+from django.utils import timezone
+
+# ✅ CORRECT - Uses Malaysia timezone
+now = timezone.now()
+today = timezone.now().date()
+created_at = timezone.now()
+
+# ❌ WRONG - Uses system timezone, not Malaysia
+import datetime
+now = datetime.datetime.now()  # NEVER use this!
+today = datetime.date.today()  # NEVER use this!
+```
+
+#### Templates - Use Foundation Tags
+
+```django
+{% load common_tags %}
+
+{# ✅ CORRECT - Uses centralized format with Malaysia timezone #}
+{% format_datetime appointment.scheduled_date %}
+{% format_date patient.date_of_birth %}
+
+{# ❌ WRONG - Manual format, may be inconsistent #}
+{{ appointment.scheduled_date|date:"d/m/Y" }}
+```
+
+#### JavaScript - Display in Malaysia Time
+
+```javascript
+// ✅ CORRECT - Format for Malaysia timezone
+function formatMalaysiaDateTime(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleString('en-MY', {
+        timeZone: 'Asia/Kuala_Lumpur',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true
+    });
+}
+
+// ❌ WRONG - Uses browser's local timezone
+function formatDateTime(isoString) {
+    return new Date(isoString).toLocaleString();  // Don't use!
+}
+```
+
+#### Validation - Date Must Be Valid
+
+```python
+def clean_date_of_birth(self):
+    """Validate date is in the past (Malaysia time)."""
+    from django.utils import timezone
+
+    dob = self.cleaned_data.get('date_of_birth')
+    today = timezone.now().date()  # ✅ Malaysia date
+
+    if dob > today:
+        raise ValidationError("Date cannot be in the future.")
+
+    return dob
+```
+
+#### Checklist
+
+- ✅ `TIME_ZONE = "Asia/Kuala_Lumpur"` in settings
+- ✅ `USE_TZ = True` in settings
+- ✅ Always use `timezone.now()` not `datetime.now()`
+- ✅ Use `{% format_datetime %}` / `{% format_date %}` in templates
+- ✅ JavaScript uses `toLocaleString('en-MY', { timeZone: 'Asia/Kuala_Lumpur' })`
+- ✅ Date validation uses `timezone.now().date()` for comparison
+
+---
+
 ### 4. Reusable Template Components (`templates/components/`)
 
 **MANDATORY for ALL templates** - Use `{% include %}` instead of duplicating HTML

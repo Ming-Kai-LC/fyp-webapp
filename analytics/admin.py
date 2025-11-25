@@ -59,13 +59,13 @@ class CustomReportAdmin(admin.ModelAdmin):
 class DataExportAdmin(admin.ModelAdmin):
     list_display = [
         'export_type',
-        'exported_by',
-        'exported_at',
+        'created_by',
+        'created_at',
         'file_format',
         'record_count',
         'anonymized',
     ]
-    list_filter = ['export_type', 'file_format', 'anonymized', 'exported_at']
-    search_fields = ['exported_by__username']
-    ordering = ['-exported_at']
-    readonly_fields = ['exported_at']
+    list_filter = ['export_type', 'file_format', 'anonymized', 'created_at']
+    search_fields = ['created_by__username']
+    ordering = ['-created_at']
+    readonly_fields = ['created_at']

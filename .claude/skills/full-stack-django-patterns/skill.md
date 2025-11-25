@@ -1839,6 +1839,2136 @@ class AjaxHelper {
 // AjaxHelper.post('/api/predict/', {xray_id: 123}).then(data => console.log(data));
 ```
 
+### 14.2 AJAX Partial Refresh Patterns
+
+**Principle:** Update only specific sections of the page without full reload for better UX.
+
+#### Server-Side: Partial Template Views
+
+```python
+# app_name/views.py
+
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+
+def is_ajax(request):
+    """Check if request is AJAX"""
+    return request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
+
+class PatientListView(LoginRequiredMixin, ListView):
+    """List view with AJAX partial refresh support"""
+    model = Patient
+    template_name = 'detection/patient_list.html'
+    paginate_by = 25
+
+    def get_template_names(self):
+        # Return partial template for AJAX requests
+        if is_ajax(self.request):
+            return ['detection/partials/patient_table.html']
+        return [self.template_name]
+
+    def render_to_response(self, context, **response_kwargs):
+        # For AJAX, return only the HTML fragment
+        if is_ajax(self.request):
+            html = render_to_string(
+                'detection/partials/patient_table.html',
+                context,
+                request=self.request
+            )
+            return HttpResponse(html)
+        return super().render_to_response(context, **response_kwargs)
+
+
+# Function-based view example
+@login_required
+def prediction_list(request):
+    """Prediction list with AJAX partial refresh"""
+    predictions = Prediction.objects.select_related(
+        'xray__patient'
+    ).order_by('-created_at')
+
+    # Apply filters
+    status = request.GET.get('status')
+    if status:
+        predictions = predictions.filter(status=status)
+
+    # Paginate
+    paginator = Paginator(predictions, 25)
+    page = request.GET.get('page', 1)
+    predictions = paginator.get_page(page)
+
+    context = {
+        'predictions': predictions,
+        'page_obj': predictions,
+    }
+
+    # Return partial for AJAX, full page otherwise
+    if is_ajax(request):
+        html = render_to_string(
+            'detection/partials/prediction_table.html',
+            context,
+            request=request
+        )
+        return HttpResponse(html)
+
+    return render(request, 'detection/prediction_list.html', context)
+
+
+# AJAX endpoint for updating single item
+@login_required
+@require_POST
+def update_prediction_status(request, pk):
+    """Update prediction status via AJAX"""
+    prediction = get_object_or_404(Prediction, pk=pk)
+
+    # Check permission
+    if not request.user.profile.is_staff():
+        return JsonResponse({'error': 'Permission denied'}, status=403)
+
+    new_status = request.POST.get('status')
+    prediction.status = new_status
+    prediction.save()
+
+    # Return updated row HTML
+    html = render_to_string(
+        'detection/partials/prediction_row.html',
+        {'prediction': prediction},
+        request=request
+    )
+
+    return JsonResponse({
+        'success': True,
+        'html': html,
+        'message': f'Status updated to {new_status}'
+    })
+```
+
+#### Template Structure: Main + Partials
+
+```
+templates/
+├── detection/
+│   ├── patient_list.html          # Full page template
+│   ├── prediction_list.html       # Full page template
+│   └── partials/                  # ⭐ Partial templates folder
+│       ├── patient_table.html     # Table body only
+│       ├── prediction_table.html  # Table body only
+│       ├── prediction_row.html    # Single row
+│       └── dashboard_stats.html   # Dashboard statistics section
+```
+
+**Main Template (Full Page):**
+```django
+{# templates/detection/prediction_list.html #}
+{% extends "base.html" %}
+{% load common_tags %}
+
+{% block content %}
+<div class="container-fluid">
+    <h1>Predictions</h1>
+
+    {# Filter form #}
+    <form id="filter-form" class="mb-4">
+        <select name="status" id="status-filter" class="form-select w-auto d-inline-block">
+            <option value="">All Status</option>
+            <option value="pending">Pending</option>
+            <option value="validated">Validated</option>
+        </select>
+    </form>
+
+    {# ⭐ Container for AJAX updates #}
+    <div id="predictions-container">
+        {% include "detection/partials/prediction_table.html" %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/partial_refresh.js' %}"></script>
+<script>
+    // Initialize partial refresh for this page
+    new PartialRefresh({
+        containerId: 'predictions-container',
+        filterFormId: 'filter-form',
+        url: '{% url "detection:prediction_list" %}'
+    });
+</script>
+{% endblock %}
+```
+
+**Partial Template (Table Only):**
+```django
+{# templates/detection/partials/prediction_table.html #}
+{# ⭐ NO extends - this is a fragment #}
+{% load common_tags %}
+
+<div class="table-responsive">
+    <table class="table table-hover" id="predictions-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Patient</th>
+                <th>Diagnosis</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prediction in predictions %}
+                {% include "detection/partials/prediction_row.html" %}
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center text-muted">
+                        No predictions found.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# Pagination #}
+{% if page_obj.has_other_pages %}
+<nav aria-label="Pagination" class="mt-3">
+    <ul class="pagination justify-content-center" id="pagination">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link ajax-link" href="?page={{ page_obj.previous_page_number }}">&laquo;</a>
+            </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link ajax-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link ajax-link" href="?page={{ page_obj.next_page_number }}">&raquo;</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+```
+
+**Single Row Partial:**
+```django
+{# templates/detection/partials/prediction_row.html #}
+<tr id="prediction-row-{{ prediction.id }}" data-id="{{ prediction.id }}">
+    <td>{{ prediction.id }}</td>
+    <td>{{ prediction.xray.patient.name }}</td>
+    <td>{% diagnosis_badge prediction.final_diagnosis %}</td>
+    <td>{% status_badge prediction.status %}</td>
+    <td>{% format_datetime prediction.created_at %}</td>
+    <td>
+        <div class="btn-group btn-group-sm">
+            <a href="{% url 'detection:prediction_detail' prediction.id %}"
+               class="btn btn-outline-primary" title="View">
+                <i class="bi bi-eye"></i>
+            </a>
+            {% if user.profile.is_staff %}
+            <button type="button" class="btn btn-outline-success btn-validate"
+                    data-id="{{ prediction.id }}" title="Validate">
+                <i class="bi bi-check-lg"></i>
+            </button>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+```
+
+#### Client-Side: PartialRefresh Class
+
+```javascript
+// static/js/partial_refresh.js
+
+/**
+ * PartialRefresh - Handle AJAX partial page updates
+ *
+ * Features:
+ * - Filter form auto-submit
+ * - Pagination without full reload
+ * - Loading indicators
+ * - Error handling
+ * - URL history management
+ */
+class PartialRefresh {
+    constructor(options) {
+        this.container = document.getElementById(options.containerId);
+        this.filterForm = document.getElementById(options.filterFormId);
+        this.url = options.url;
+        this.loadingClass = options.loadingClass || 'loading';
+        this.debounceTime = options.debounceTime || 300;
+
+        this.init();
+    }
+
+    init() {
+        // Filter form change handler
+        if (this.filterForm) {
+            this.filterForm.addEventListener('change', (e) => {
+                this.debounce(() => this.refresh(), this.debounceTime);
+            });
+
+            // Prevent normal form submission
+            this.filterForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                this.refresh();
+            });
+        }
+
+        // Delegate click events for pagination and ajax links
+        this.container.addEventListener('click', (e) => {
+            const link = e.target.closest('.ajax-link');
+            if (link) {
+                e.preventDefault();
+                this.loadUrl(link.href);
+            }
+        });
+
+        // Handle browser back/forward
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.partialUrl) {
+                this.loadUrl(e.state.partialUrl, false);
+            }
+        });
+    }
+
+    /**
+     * Refresh container with current filter values
+     */
+    async refresh() {
+        const params = this.filterForm
+            ? new URLSearchParams(new FormData(this.filterForm))
+            : '';
+        const url = `${this.url}?${params}`;
+        await this.loadUrl(url);
+    }
+
+    /**
+     * Load URL and update container
+     */
+    async loadUrl(url, pushState = true) {
+        this.showLoading();
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const html = await response.text();
+            this.container.innerHTML = html;
+
+            // Update URL without reload
+            if (pushState) {
+                history.pushState({ partialUrl: url }, '', url);
+            }
+
+            // Re-initialize any JavaScript in new content
+            this.initNewContent();
+
+        } catch (error) {
+            console.error('Partial refresh error:', error);
+            this.showError('Failed to load content. Please try again.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Update a single row in a table
+     */
+    async updateRow(rowId, url) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+
+        row.classList.add('updating');
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.html) {
+                // Replace row with new HTML
+                row.outerHTML = data.html;
+                this.showToast(data.message || 'Updated successfully', 'success');
+            } else {
+                throw new Error(data.error || 'Update failed');
+            }
+
+        } catch (error) {
+            console.error('Row update error:', error);
+            this.showToast(error.message, 'danger');
+            row.classList.remove('updating');
+        }
+    }
+
+    /**
+     * Delete a row with confirmation
+     */
+    async deleteRow(rowId, url, confirmMessage = 'Are you sure?') {
+        if (!confirm(confirmMessage)) return;
+
+        const row = document.getElementById(rowId);
+        if (!row) return;
+
+        row.classList.add('deleting');
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.getCSRFToken()
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Animate row removal
+                row.style.transition = 'opacity 0.3s';
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 300);
+                this.showToast(data.message || 'Deleted successfully', 'success');
+            } else {
+                throw new Error(data.error || 'Delete failed');
+            }
+
+        } catch (error) {
+            console.error('Delete error:', error);
+            this.showToast(error.message, 'danger');
+            row.classList.remove('deleting');
+        }
+    }
+
+    showLoading() {
+        this.container.classList.add(this.loadingClass);
+
+        // Add spinner overlay
+        if (!this.container.querySelector('.loading-overlay')) {
+            const overlay = document.createElement('div');
+            overlay.className = 'loading-overlay';
+            overlay.innerHTML = `
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            `;
+            this.container.style.position = 'relative';
+            this.container.appendChild(overlay);
+        }
+    }
+
+    hideLoading() {
+        this.container.classList.remove(this.loadingClass);
+        const overlay = this.container.querySelector('.loading-overlay');
+        if (overlay) overlay.remove();
+    }
+
+    showError(message) {
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        this.container.insertBefore(alert, this.container.firstChild);
+    }
+
+    showToast(message, type = 'info') {
+        // Use Bootstrap toast or custom notification
+        const toast = document.createElement('div');
+        toast.className = `alert alert-${type} position-fixed`;
+        toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 250px;';
+        toast.textContent = message;
+        document.body.appendChild(toast);
+
+        setTimeout(() => {
+            toast.style.transition = 'opacity 0.3s';
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+
+    getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+            || document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+    }
+
+    initNewContent() {
+        // Re-initialize tooltips, popovers, etc.
+        const tooltips = this.container.querySelectorAll('[data-bs-toggle="tooltip"]');
+        tooltips.forEach(el => new bootstrap.Tooltip(el));
+    }
+
+    debounce(func, wait) {
+        clearTimeout(this._debounceTimer);
+        this._debounceTimer = setTimeout(func, wait);
+    }
+}
+
+
+/**
+ * InlineEdit - Edit fields inline without page reload
+ */
+class InlineEdit {
+    constructor(options) {
+        this.container = document.getElementById(options.containerId);
+        this.url = options.url;
+
+        this.init();
+    }
+
+    init() {
+        // Delegate click events for edit buttons
+        this.container.addEventListener('click', (e) => {
+            const editBtn = e.target.closest('.btn-inline-edit');
+            if (editBtn) {
+                e.preventDefault();
+                this.startEdit(editBtn);
+            }
+
+            const saveBtn = e.target.closest('.btn-inline-save');
+            if (saveBtn) {
+                e.preventDefault();
+                this.saveEdit(saveBtn);
+            }
+
+            const cancelBtn = e.target.closest('.btn-inline-cancel');
+            if (cancelBtn) {
+                e.preventDefault();
+                this.cancelEdit(cancelBtn);
+            }
+        });
+    }
+
+    startEdit(button) {
+        const cell = button.closest('td');
+        const value = cell.dataset.value || cell.textContent.trim();
+        const field = cell.dataset.field;
+
+        // Store original content
+        cell.dataset.original = cell.innerHTML;
+
+        // Replace with input
+        cell.innerHTML = `
+            <div class="input-group input-group-sm">
+                <input type="text" class="form-control" name="${field}" value="${value}">
+                <button class="btn btn-success btn-inline-save" type="button">
+                    <i class="bi bi-check"></i>
+                </button>
+                <button class="btn btn-secondary btn-inline-cancel" type="button">
+                    <i class="bi bi-x"></i>
+                </button>
+            </div>
+        `;
+
+        // Focus input
+        cell.querySelector('input').focus();
+    }
+
+    async saveEdit(button) {
+        const cell = button.closest('td');
+        const row = cell.closest('tr');
+        const input = cell.querySelector('input');
+        const field = cell.dataset.field;
+        const id = row.dataset.id;
+        const value = input.value;
+
+        try {
+            const response = await fetch(`${this.url}${id}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCSRFToken(),
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ [field]: value })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Update cell with new value
+                cell.innerHTML = data.display_value || value;
+                cell.dataset.value = value;
+            } else {
+                throw new Error(data.error || 'Save failed');
+            }
+
+        } catch (error) {
+            console.error('Save error:', error);
+            alert(error.message);
+        }
+    }
+
+    cancelEdit(button) {
+        const cell = button.closest('td');
+        cell.innerHTML = cell.dataset.original;
+    }
+
+    getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value
+            || document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+    }
+}
+
+
+/**
+ * AutoRefresh - Automatically refresh content at intervals
+ */
+class AutoRefresh {
+    constructor(options) {
+        this.container = document.getElementById(options.containerId);
+        this.url = options.url;
+        this.interval = options.interval || 30000; // 30 seconds default
+        this.enabled = options.autoStart !== false;
+
+        if (this.enabled) {
+            this.start();
+        }
+    }
+
+    async refresh() {
+        try {
+            const response = await fetch(this.url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (response.ok) {
+                const html = await response.text();
+                this.container.innerHTML = html;
+            }
+        } catch (error) {
+            console.error('Auto-refresh error:', error);
+        }
+    }
+
+    start() {
+        this.enabled = true;
+        this.timer = setInterval(() => this.refresh(), this.interval);
+    }
+
+    stop() {
+        this.enabled = false;
+        if (this.timer) {
+            clearInterval(this.timer);
+            this.timer = null;
+        }
+    }
+
+    toggle() {
+        if (this.enabled) {
+            this.stop();
+        } else {
+            this.start();
+        }
+        return this.enabled;
+    }
+}
+```
+
+#### CSS for Loading States
+
+```css
+/* static/css/partial_refresh.css */
+
+/* Loading overlay */
+.loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 255, 255, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+}
+
+/* Container loading state */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Row updating state */
+tr.updating {
+    background-color: #fff3cd !important;
+    transition: background-color 0.3s;
+}
+
+/* Row deleting state */
+tr.deleting {
+    background-color: #f8d7da !important;
+}
+
+/* Fade in animation for new content */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.ajax-loaded {
+    animation: fadeIn 0.3s ease-out;
+}
+```
+
+#### Dashboard Auto-Refresh Example
+
+```django
+{# templates/dashboards/staff_dashboard.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Staff Dashboard</h1>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="auto-refresh-toggle" checked>
+            <label class="form-check-label" for="auto-refresh-toggle">
+                Auto-refresh (30s)
+            </label>
+        </div>
+    </div>
+
+    {# Statistics cards - auto refresh #}
+    <div id="dashboard-stats">
+        {% include "dashboards/partials/stats_cards.html" %}
+    </div>
+
+    {# Recent predictions - manual refresh #}
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between">
+            <span>Recent Predictions</span>
+            <button class="btn btn-sm btn-outline-primary" id="refresh-predictions">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body" id="recent-predictions">
+            {% include "dashboards/partials/recent_predictions.html" %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/partial_refresh.js' %}"></script>
+<script>
+    // Auto-refresh for dashboard stats
+    const statsRefresh = new AutoRefresh({
+        containerId: 'dashboard-stats',
+        url: '{% url "dashboards:stats_partial" %}',
+        interval: 30000  // 30 seconds
+    });
+
+    // Toggle auto-refresh
+    document.getElementById('auto-refresh-toggle').addEventListener('change', function() {
+        statsRefresh.toggle();
+    });
+
+    // Manual refresh for predictions
+    document.getElementById('refresh-predictions').addEventListener('click', async function() {
+        const container = document.getElementById('recent-predictions');
+        const btn = this;
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        try {
+            const response = await fetch('{% url "dashboards:predictions_partial" %}', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            container.innerHTML = await response.text();
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> Refresh';
+        }
+    });
+</script>
+{% endblock %}
+```
+
+#### URL Configuration
+
+```python
+# app_name/urls.py
+
+urlpatterns = [
+    # Full page views
+    path('predictions/', views.prediction_list, name='prediction_list'),
+    path('patients/', views.PatientListView.as_view(), name='patient_list'),
+
+    # Partial endpoints (for AJAX)
+    path('partials/stats/', views.dashboard_stats_partial, name='stats_partial'),
+    path('partials/predictions/', views.recent_predictions_partial, name='predictions_partial'),
+
+    # AJAX actions
+    path('predictions/<int:pk>/update-status/',
+         views.update_prediction_status, name='update_prediction_status'),
+    path('predictions/<int:pk>/delete/',
+         views.delete_prediction, name='delete_prediction'),
+]
+```
+
+#### Partial Refresh Checklist
+
+**Server-Side:**
+- ✅ Views detect AJAX requests with `is_ajax()` helper
+- ✅ Partial templates in `templates/app/partials/` folder
+- ✅ Partial templates do NOT extend base template
+- ✅ Return HTML fragment for AJAX, full page otherwise
+- ✅ Single-item updates return JSON with `html` field
+
+**Client-Side:**
+- ✅ Use `PartialRefresh` class for list views
+- ✅ Use `InlineEdit` class for inline editing
+- ✅ Use `AutoRefresh` class for dashboard auto-updates
+- ✅ Loading indicators shown during fetch
+- ✅ Error handling with user feedback
+- ✅ URL history updated (browser back/forward works)
+
+**Templates:**
+- ✅ Main template includes partial: `{% include "app/partials/table.html" %}`
+- ✅ Container has unique ID for JavaScript targeting
+- ✅ Pagination links have `ajax-link` class
+- ✅ Action buttons have appropriate classes
+
+### 14.3 Scroll Restoration Patterns
+
+**Principle:** Preserve and restore scroll position for better UX after AJAX updates, form submissions, and navigation.
+
+#### Pattern 1: AJAX Partial Refresh - Preserve Scroll Position
+
+```javascript
+// static/js/scroll_restoration.js
+
+/**
+ * ScrollManager - Handle scroll position preservation and restoration
+ *
+ * Features:
+ * - Preserve scroll during AJAX updates
+ * - Scroll to errors after form validation
+ * - Remember scroll position across page loads
+ * - Smooth scroll to anchors
+ */
+class ScrollManager {
+    constructor() {
+        this.scrollKey = 'scrollPosition';
+        this.init();
+    }
+
+    init() {
+        // Restore scroll on page load (for browser back/forward)
+        if (history.scrollRestoration) {
+            history.scrollRestoration = 'manual';
+        }
+
+        // Restore saved position on page load
+        window.addEventListener('load', () => {
+            this.restoreScrollPosition();
+        });
+
+        // Save position before unload
+        window.addEventListener('beforeunload', () => {
+            this.saveScrollPosition();
+        });
+
+        // Handle popstate (browser back/forward)
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.scrollY !== undefined) {
+                setTimeout(() => {
+                    window.scrollTo(0, e.state.scrollY);
+                }, 100);
+            }
+        });
+    }
+
+    /**
+     * Save current scroll position to sessionStorage
+     */
+    saveScrollPosition(key = null) {
+        const storageKey = key || `${this.scrollKey}_${window.location.pathname}`;
+        sessionStorage.setItem(storageKey, window.scrollY.toString());
+    }
+
+    /**
+     * Restore scroll position from sessionStorage
+     */
+    restoreScrollPosition(key = null) {
+        const storageKey = key || `${this.scrollKey}_${window.location.pathname}`;
+        const savedPosition = sessionStorage.getItem(storageKey);
+
+        if (savedPosition) {
+            window.scrollTo(0, parseInt(savedPosition, 10));
+            sessionStorage.removeItem(storageKey);
+        }
+    }
+
+    /**
+     * Preserve scroll position during AJAX update
+     * Usage: await scrollManager.preserveScroll(async () => { ...ajax update... });
+     */
+    async preserveScroll(asyncFn) {
+        const scrollY = window.scrollY;
+
+        await asyncFn();
+
+        // Restore after DOM update
+        requestAnimationFrame(() => {
+            window.scrollTo(0, scrollY);
+        });
+    }
+
+    /**
+     * Scroll to element smoothly
+     */
+    scrollToElement(element, offset = 80) {
+        if (!element) return;
+
+        const elementPosition = element.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.scrollY - offset;
+
+        window.scrollTo({
+            top: offsetPosition,
+            behavior: 'smooth'
+        });
+    }
+
+    /**
+     * Scroll to first error in form
+     */
+    scrollToFirstError(formId) {
+        const form = document.getElementById(formId);
+        if (!form) return;
+
+        // Find first invalid field or error message
+        const firstError = form.querySelector('.is-invalid, .invalid-feedback:not(:empty), .alert-danger');
+
+        if (firstError) {
+            this.scrollToElement(firstError);
+            // Focus the input if it's a form field
+            const input = firstError.classList.contains('is-invalid')
+                ? firstError
+                : firstError.closest('.mb-3')?.querySelector('input, select, textarea');
+            if (input) {
+                input.focus();
+            }
+        }
+    }
+
+    /**
+     * Scroll to top smoothly
+     */
+    scrollToTop() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    }
+
+    /**
+     * Scroll to bottom (for chat/logs)
+     */
+    scrollToBottom(container) {
+        if (typeof container === 'string') {
+            container = document.getElementById(container);
+        }
+        if (container) {
+            container.scrollTop = container.scrollHeight;
+        }
+    }
+
+    /**
+     * Check if element is in viewport
+     */
+    isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.left >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) &&
+            rect.right <= (window.innerWidth || document.documentElement.clientWidth)
+        );
+    }
+
+    /**
+     * Scroll to element only if not in viewport
+     */
+    scrollIntoViewIfNeeded(element, offset = 80) {
+        if (!this.isInViewport(element)) {
+            this.scrollToElement(element, offset);
+        }
+    }
+}
+
+// Global instance
+const scrollManager = new ScrollManager();
+```
+
+#### Pattern 2: Update PartialRefresh Class with Scroll Preservation
+
+```javascript
+// Add to PartialRefresh class in partial_refresh.js
+
+class PartialRefresh {
+    // ... existing code ...
+
+    /**
+     * Load URL and update container - WITH SCROLL PRESERVATION
+     */
+    async loadUrl(url, pushState = true) {
+        // ⭐ Save scroll position BEFORE update
+        const scrollY = window.scrollY;
+
+        this.showLoading();
+
+        try {
+            const response = await fetch(url, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+
+            const html = await response.text();
+            this.container.innerHTML = html;
+
+            // Update URL without reload
+            if (pushState) {
+                // ⭐ Include scroll position in history state
+                history.pushState(
+                    { partialUrl: url, scrollY: scrollY },
+                    '',
+                    url
+                );
+            }
+
+            // ⭐ Restore scroll position AFTER DOM update
+            requestAnimationFrame(() => {
+                window.scrollTo(0, scrollY);
+            });
+
+            this.initNewContent();
+
+        } catch (error) {
+            console.error('Partial refresh error:', error);
+            this.showError('Failed to load content. Please try again.');
+        } finally {
+            this.hideLoading();
+        }
+    }
+
+    /**
+     * Update row and scroll to it if needed
+     */
+    async updateRow(rowId, url) {
+        const row = document.getElementById(rowId);
+        if (!row) return;
+
+        row.classList.add('updating');
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+
+            const data = await response.json();
+
+            if (data.success && data.html) {
+                row.outerHTML = data.html;
+
+                // ⭐ Scroll to updated row if not in viewport
+                const newRow = document.getElementById(rowId);
+                if (newRow && !this.isInViewport(newRow)) {
+                    newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
+                // ⭐ Highlight updated row briefly
+                newRow?.classList.add('highlight-update');
+                setTimeout(() => newRow?.classList.remove('highlight-update'), 2000);
+
+                this.showToast(data.message || 'Updated successfully', 'success');
+            } else {
+                throw new Error(data.error || 'Update failed');
+            }
+
+        } catch (error) {
+            console.error('Row update error:', error);
+            this.showToast(error.message, 'danger');
+            row.classList.remove('updating');
+        }
+    }
+
+    isInViewport(element) {
+        const rect = element.getBoundingClientRect();
+        return (
+            rect.top >= 0 &&
+            rect.bottom <= (window.innerHeight || document.documentElement.clientHeight)
+        );
+    }
+}
+```
+
+#### Pattern 3: Form Error Scroll (Server-Side + Client-Side)
+
+**Server-Side: Django View**
+```python
+# app_name/views.py
+
+class PatientCreateView(LoginRequiredMixin, CreateView):
+    model = Patient
+    form_class = PatientForm
+    template_name = 'detection/patient_form.html'
+
+    def form_invalid(self, form):
+        """Handle form errors - add scroll flag"""
+        response = super().form_invalid(form)
+
+        # Add flag to indicate form has errors (for JavaScript)
+        response.context_data['form_has_errors'] = True
+
+        return response
+```
+
+**Client-Side: Auto-scroll to Errors**
+```javascript
+// static/js/form_scroll.js
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Check if form has errors (set by Django)
+    const formHasErrors = document.querySelector('[data-form-errors="true"]');
+
+    if (formHasErrors) {
+        // Scroll to first error
+        scrollManager.scrollToFirstError(formHasErrors.id);
+    }
+
+    // Also handle client-side validation errors
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            // After validation, scroll to first error if any
+            setTimeout(() => {
+                const firstError = form.querySelector('.is-invalid');
+                if (firstError) {
+                    scrollManager.scrollToElement(firstError);
+                }
+            }, 100);
+        });
+    });
+});
+```
+
+**Template Integration:**
+```django
+{# templates/detection/patient_form.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<form method="post" id="patient-form"
+      {% if form_has_errors %}data-form-errors="true"{% endif %}>
+    {% csrf_token %}
+
+    {% if form.errors %}
+    <div class="alert alert-danger" id="form-errors-alert">
+        <strong>Please correct the errors below:</strong>
+        {{ form.non_field_errors }}
+    </div>
+    {% endif %}
+
+    {# Form fields #}
+    {% for field in form %}
+    <div class="mb-3">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+        <div class="invalid-feedback d-block">{{ field.errors.0 }}</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-primary">Save</button>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/scroll_restoration.js' %}"></script>
+<script src="{% static 'js/form_scroll.js' %}"></script>
+{% endblock %}
+```
+
+#### Pattern 4: Pagination with Scroll Memory
+
+```javascript
+// static/js/pagination_scroll.js
+
+/**
+ * Remember scroll position when navigating between pages
+ * and restore when using browser back button
+ */
+class PaginationScroll {
+    constructor(options = {}) {
+        this.containerId = options.containerId || 'content-container';
+        this.scrollKey = options.scrollKey || 'pagination_scroll';
+
+        this.init();
+    }
+
+    init() {
+        // Intercept pagination clicks
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('.pagination .page-link');
+            if (link && !link.classList.contains('ajax-link')) {
+                // Save scroll position before navigation
+                this.savePosition();
+            }
+        });
+
+        // Restore on page load if coming from pagination
+        const referrer = document.referrer;
+        const currentPath = window.location.pathname;
+
+        if (referrer.includes(currentPath.split('?')[0])) {
+            this.restorePosition();
+        }
+    }
+
+    savePosition() {
+        const key = `${this.scrollKey}_${window.location.pathname}`;
+        sessionStorage.setItem(key, JSON.stringify({
+            scrollY: window.scrollY,
+            timestamp: Date.now()
+        }));
+    }
+
+    restorePosition() {
+        const key = `${this.scrollKey}_${window.location.pathname}`;
+        const saved = sessionStorage.getItem(key);
+
+        if (saved) {
+            const data = JSON.parse(saved);
+
+            // Only restore if saved within last 5 minutes
+            if (Date.now() - data.timestamp < 5 * 60 * 1000) {
+                setTimeout(() => {
+                    window.scrollTo(0, data.scrollY);
+                }, 100);
+            }
+
+            sessionStorage.removeItem(key);
+        }
+    }
+}
+
+// Initialize
+new PaginationScroll();
+```
+
+#### Pattern 5: Anchor Links with Smooth Scroll
+
+```javascript
+// static/js/smooth_scroll.js
+
+/**
+ * Smooth scroll for anchor links with offset for fixed navbar
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    const navbarHeight = document.querySelector('.navbar-fixed-top, .fixed-top')?.offsetHeight || 0;
+    const scrollOffset = navbarHeight + 20; // Extra padding
+
+    // Handle anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function(e) {
+            const targetId = this.getAttribute('href');
+
+            if (targetId === '#') return; // Skip empty anchors
+
+            const target = document.querySelector(targetId);
+
+            if (target) {
+                e.preventDefault();
+
+                const targetPosition = target.getBoundingClientRect().top;
+                const offsetPosition = targetPosition + window.scrollY - scrollOffset;
+
+                window.scrollTo({
+                    top: offsetPosition,
+                    behavior: 'smooth'
+                });
+
+                // Update URL without scrolling
+                history.pushState(null, null, targetId);
+            }
+        });
+    });
+
+    // Handle direct URL with hash on page load
+    if (window.location.hash) {
+        const target = document.querySelector(window.location.hash);
+        if (target) {
+            setTimeout(() => {
+                const targetPosition = target.getBoundingClientRect().top;
+                const offsetPosition = targetPosition + window.scrollY - scrollOffset;
+                window.scrollTo(0, offsetPosition);
+            }, 100);
+        }
+    }
+});
+```
+
+#### Pattern 6: Scroll to New Item After Creation
+
+```javascript
+// After creating a new item, scroll to it in the list
+
+async function createAndScrollToItem(formData, listUrl, containerId) {
+    try {
+        // Create item via AJAX
+        const response = await fetch('/api/items/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify(formData)
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Reload the list
+            const container = document.getElementById(containerId);
+            const listResponse = await fetch(listUrl, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            container.innerHTML = await listResponse.text();
+
+            // ⭐ Scroll to newly created item
+            const newRow = document.getElementById(`row-${data.id}`);
+            if (newRow) {
+                newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                newRow.classList.add('highlight-new');
+                setTimeout(() => newRow.classList.remove('highlight-new'), 3000);
+            }
+
+            showToast('Item created successfully', 'success');
+        }
+
+    } catch (error) {
+        console.error('Create error:', error);
+        showToast('Failed to create item', 'danger');
+    }
+}
+```
+
+#### CSS for Scroll-Related Animations
+
+```css
+/* static/css/scroll_animations.css */
+
+/* Highlight row after update */
+@keyframes highlightUpdate {
+    0% { background-color: #d4edda; }
+    100% { background-color: transparent; }
+}
+
+tr.highlight-update {
+    animation: highlightUpdate 2s ease-out;
+}
+
+/* Highlight newly created item */
+@keyframes highlightNew {
+    0% { background-color: #cce5ff; box-shadow: 0 0 10px rgba(0, 123, 255, 0.5); }
+    100% { background-color: transparent; box-shadow: none; }
+}
+
+tr.highlight-new,
+.card.highlight-new {
+    animation: highlightNew 3s ease-out;
+}
+
+/* Smooth scroll behavior for entire page */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Scroll padding for fixed navbar */
+html {
+    scroll-padding-top: 80px; /* Adjust based on navbar height */
+}
+
+/* Back to top button */
+.btn-back-to-top {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s, visibility 0.3s;
+}
+
+.btn-back-to-top.visible {
+    opacity: 1;
+    visibility: visible;
+}
+```
+
+#### Pattern 7: Back to Top Button
+
+```javascript
+// static/js/back_to_top.js
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Create back to top button
+    const btn = document.createElement('button');
+    btn.className = 'btn btn-primary btn-back-to-top';
+    btn.innerHTML = '<i class="bi bi-arrow-up"></i>';
+    btn.setAttribute('aria-label', 'Back to top');
+    btn.setAttribute('title', 'Back to top');
+    document.body.appendChild(btn);
+
+    // Show/hide based on scroll position
+    window.addEventListener('scroll', function() {
+        if (window.scrollY > 300) {
+            btn.classList.add('visible');
+        } else {
+            btn.classList.remove('visible');
+        }
+    });
+
+    // Scroll to top on click
+    btn.addEventListener('click', function() {
+        window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+        });
+    });
+});
+```
+
+#### Scroll Restoration Checklist
+
+**AJAX Updates:**
+- ✅ Save scroll position BEFORE fetching new content
+- ✅ Restore scroll position AFTER DOM update using `requestAnimationFrame`
+- ✅ Include scroll position in `history.pushState()` state object
+- ✅ Handle `popstate` event to restore scroll on back/forward
+
+**Form Errors:**
+- ✅ Add `data-form-errors="true"` attribute when form has errors
+- ✅ Auto-scroll to first `.is-invalid` field on page load
+- ✅ Focus the error field after scrolling
+
+**Pagination:**
+- ✅ Save scroll position before page navigation
+- ✅ Restore position when coming back to paginated list
+- ✅ Clear saved position after restoration
+
+**New Items:**
+- ✅ Scroll to newly created item in list
+- ✅ Highlight new item with animation
+- ✅ Use `scrollIntoView({ block: 'center' })` for centered positioning
+
+**Anchor Links:**
+- ✅ Use smooth scroll behavior
+- ✅ Account for fixed navbar height with offset
+- ✅ Update URL hash without jumping
+
+**Back to Top:**
+- ✅ Show button after scrolling 300px
+- ✅ Smooth scroll animation
+- ✅ Accessible with `aria-label`
+
+### 14.4 Form State Persistence Patterns
+
+**Principle:** Preserve user input to prevent data loss on validation errors, page refresh, or accidental navigation.
+
+#### Pattern 1: Django Server-Side Retention (Built-in)
+
+Django automatically retains form values when validation fails because the form is "bound" with POST data.
+
+```python
+# views.py - Django handles this automatically
+
+class PatientRegistrationView(CreateView):
+    model = Patient
+    form_class = PatientRegistrationForm
+    template_name = 'detection/register.html'
+
+    def form_invalid(self, form):
+        """
+        When validation fails, Django re-renders the template with
+        the bound form - all values are automatically retained!
+        """
+        # Add error message
+        messages.error(self.request, 'Please correct the errors below.')
+
+        # The form already contains the submitted values
+        return super().form_invalid(form)
+```
+
+**Template - Values Auto-Populated:**
+```django
+{# templates/detection/register.html #}
+{% extends "base.html" %}
+
+{% block content %}
+<form method="post" id="registration-form">
+    {% csrf_token %}
+
+    {# Django widgets automatically include value="{{ field.value }}" #}
+    <div class="mb-3">
+        <label for="{{ form.username.id_for_label }}">Username</label>
+        {{ form.username }}
+        {# If form has errors, this field ALREADY has the submitted value #}
+        {% if form.username.errors %}
+            <div class="invalid-feedback d-block">{{ form.username.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    <div class="mb-3">
+        <label for="{{ form.email.id_for_label }}">Email</label>
+        {{ form.email }}
+        {# Value retained: user doesn't need to re-type #}
+        {% if form.email.errors %}
+            <div class="invalid-feedback d-block">{{ form.email.errors.0 }}</div>
+        {% endif %}
+    </div>
+
+    {# Password fields should NOT retain values for security #}
+    <div class="mb-3">
+        <label for="{{ form.password.id_for_label }}">Password</label>
+        {{ form.password }}
+        {# Password is intentionally cleared on error #}
+    </div>
+
+    <button type="submit" class="btn btn-primary">Register</button>
+</form>
+{% endblock %}
+```
+
+**Important:** Password fields should NOT retain values for security reasons. Django's `PasswordInput` widget does this by default.
+
+#### Pattern 2: Client-Side Persistence (localStorage/sessionStorage)
+
+For page refresh, accidental navigation, or browser crashes - save form data client-side.
+
+```javascript
+// static/js/form_persistence.js
+
+/**
+ * FormPersistence - Auto-save form data to prevent loss on refresh
+ *
+ * Features:
+ * - Auto-save on input change (debounced)
+ * - Restore on page load
+ * - Clear on successful submit
+ * - Exclude sensitive fields (passwords)
+ * - Configurable storage (localStorage or sessionStorage)
+ */
+class FormPersistence {
+    constructor(options) {
+        this.form = document.getElementById(options.formId);
+        if (!this.form) return;
+
+        this.storageKey = options.storageKey || `form_${options.formId}_${window.location.pathname}`;
+        this.storage = options.useLocalStorage ? localStorage : sessionStorage;
+        this.debounceTime = options.debounceTime || 500;
+        this.excludeFields = options.excludeFields || ['password', 'password1', 'password2', 'csrfmiddlewaretoken'];
+        this.excludeTypes = options.excludeTypes || ['password', 'hidden', 'file'];
+
+        this.init();
+    }
+
+    init() {
+        // Restore saved data on page load
+        this.restore();
+
+        // Save on input change (debounced)
+        this.form.addEventListener('input', (e) => {
+            if (!this.shouldExclude(e.target)) {
+                this.debounceSave();
+            }
+        });
+
+        // Save on select/checkbox change
+        this.form.addEventListener('change', (e) => {
+            if (!this.shouldExclude(e.target)) {
+                this.save();
+            }
+        });
+
+        // Clear on successful submit
+        this.form.addEventListener('submit', () => {
+            // Clear after a short delay to allow form submission
+            setTimeout(() => this.clear(), 100);
+        });
+
+        // Save before page unload (backup)
+        window.addEventListener('beforeunload', () => {
+            this.save();
+        });
+    }
+
+    /**
+     * Check if field should be excluded from persistence
+     */
+    shouldExclude(field) {
+        if (!field.name) return true;
+        if (this.excludeFields.includes(field.name)) return true;
+        if (this.excludeTypes.includes(field.type)) return true;
+        if (field.dataset.noPersist === 'true') return true;
+        return false;
+    }
+
+    /**
+     * Save form data to storage
+     */
+    save() {
+        const data = {};
+        const formData = new FormData(this.form);
+
+        for (const [name, value] of formData.entries()) {
+            const field = this.form.elements[name];
+            if (field && !this.shouldExclude(field)) {
+                // Handle checkboxes and radio buttons
+                if (field.type === 'checkbox') {
+                    data[name] = field.checked;
+                } else if (field.type === 'radio') {
+                    if (field.checked) {
+                        data[name] = value;
+                    }
+                } else {
+                    data[name] = value;
+                }
+            }
+        }
+
+        // Add timestamp
+        data._savedAt = Date.now();
+
+        this.storage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    /**
+     * Restore form data from storage
+     */
+    restore() {
+        const saved = this.storage.getItem(this.storageKey);
+        if (!saved) return;
+
+        try {
+            const data = JSON.parse(saved);
+
+            // Check if data is not too old (24 hours max)
+            if (data._savedAt && Date.now() - data._savedAt > 24 * 60 * 60 * 1000) {
+                this.clear();
+                return;
+            }
+
+            // Restore each field
+            for (const [name, value] of Object.entries(data)) {
+                if (name.startsWith('_')) continue; // Skip metadata
+
+                const field = this.form.elements[name];
+                if (!field || this.shouldExclude(field)) continue;
+
+                // Don't overwrite fields that already have server-side values
+                // (from Django form errors)
+                if (field.value && field.dataset.hasServerValue === 'true') continue;
+
+                if (field.type === 'checkbox') {
+                    field.checked = value === true;
+                } else if (field.type === 'radio') {
+                    const radio = this.form.querySelector(`input[name="${name}"][value="${value}"]`);
+                    if (radio) radio.checked = true;
+                } else if (field.tagName === 'SELECT') {
+                    field.value = value;
+                } else {
+                    field.value = value;
+                }
+            }
+
+            // Show indicator that data was restored
+            this.showRestoredIndicator();
+
+        } catch (e) {
+            console.error('Error restoring form data:', e);
+            this.clear();
+        }
+    }
+
+    /**
+     * Clear saved data
+     */
+    clear() {
+        this.storage.removeItem(this.storageKey);
+    }
+
+    /**
+     * Show visual indicator that form data was restored
+     */
+    showRestoredIndicator() {
+        // Check if data was actually restored (form has values)
+        const hasValues = Array.from(this.form.elements).some(
+            el => el.value && !this.shouldExclude(el)
+        );
+
+        if (hasValues) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-info alert-dismissible fade show mb-3';
+            alert.innerHTML = `
+                <i class="bi bi-info-circle me-2"></i>
+                Your previous input has been restored.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            this.form.insertBefore(alert, this.form.firstChild);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alert.classList.remove('show');
+                setTimeout(() => alert.remove(), 150);
+            }, 5000);
+        }
+    }
+
+    /**
+     * Debounced save
+     */
+    debounceSave() {
+        clearTimeout(this._saveTimer);
+        this._saveTimer = setTimeout(() => this.save(), this.debounceTime);
+    }
+
+    /**
+     * Manually trigger save (for external use)
+     */
+    forceSave() {
+        this.save();
+    }
+
+    /**
+     * Get saved data (for debugging)
+     */
+    getSavedData() {
+        const saved = this.storage.getItem(this.storageKey);
+        return saved ? JSON.parse(saved) : null;
+    }
+}
+```
+
+#### Pattern 3: Template Integration
+
+```django
+{# templates/detection/patient_form.html #}
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+    <h1>Patient Registration</h1>
+
+    <form method="post" id="patient-form" novalidate>
+        {% csrf_token %}
+
+        {# Username - will be persisted #}
+        <div class="mb-3">
+            <label for="id_username" class="form-label">Username *</label>
+            <input type="text" name="username" id="id_username"
+                   class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                   value="{{ form.username.value|default:'' }}"
+                   {% if form.username.value %}data-has-server-value="true"{% endif %}
+                   required minlength="3" maxlength="150">
+            {% if form.username.errors %}
+                <div class="invalid-feedback">{{ form.username.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        {# Email - will be persisted #}
+        <div class="mb-3">
+            <label for="id_email" class="form-label">Email *</label>
+            <input type="email" name="email" id="id_email"
+                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                   value="{{ form.email.value|default:'' }}"
+                   {% if form.email.value %}data-has-server-value="true"{% endif %}
+                   required>
+            {% if form.email.errors %}
+                <div class="invalid-feedback">{{ form.email.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        {# Phone - will be persisted #}
+        <div class="mb-3">
+            <label for="id_phone" class="form-label">Phone</label>
+            <input type="tel" name="phone" id="id_phone"
+                   class="form-control {% if form.phone.errors %}is-invalid{% endif %}"
+                   value="{{ form.phone.value|default:'' }}"
+                   {% if form.phone.value %}data-has-server-value="true"{% endif %}>
+            {% if form.phone.errors %}
+                <div class="invalid-feedback">{{ form.phone.errors.0 }}</div>
+            {% endif %}
+        </div>
+
+        {# Password - NOT persisted (security) #}
+        <div class="mb-3">
+            <label for="id_password" class="form-label">Password *</label>
+            <input type="password" name="password" id="id_password"
+                   class="form-control {% if form.password.errors %}is-invalid{% endif %}"
+                   required minlength="8">
+            {% if form.password.errors %}
+                <div class="invalid-feedback">{{ form.password.errors.0 }}</div>
+            {% endif %}
+            <small class="text-muted">Passwords are never saved for security.</small>
+        </div>
+
+        {# File upload - NOT persisted (can't store files in localStorage) #}
+        <div class="mb-3">
+            <label for="id_profile_image" class="form-label">Profile Image</label>
+            <input type="file" name="profile_image" id="id_profile_image"
+                   class="form-control" accept="image/*"
+                   data-no-persist="true">
+            <small class="text-muted">File uploads must be re-selected after refresh.</small>
+        </div>
+
+        <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">Register</button>
+            <button type="button" class="btn btn-outline-secondary" id="clear-form">
+                Clear Form
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/form_persistence.js' %}"></script>
+<script>
+    // Initialize form persistence
+    const formPersist = new FormPersistence({
+        formId: 'patient-form',
+        storageKey: 'patient_registration',
+        useLocalStorage: false,  // Use sessionStorage (cleared on browser close)
+        excludeFields: ['password', 'password1', 'password2', 'csrfmiddlewaretoken'],
+        debounceTime: 500
+    });
+
+    // Clear form button
+    document.getElementById('clear-form').addEventListener('click', function() {
+        if (confirm('Clear all form data?')) {
+            formPersist.clear();
+            document.getElementById('patient-form').reset();
+        }
+    });
+</script>
+{% endblock %}
+```
+
+#### Pattern 4: Multi-Step Form Wizard Persistence
+
+```javascript
+// static/js/form_wizard_persistence.js
+
+/**
+ * FormWizardPersistence - Persist data across multi-step form wizard
+ */
+class FormWizardPersistence {
+    constructor(options) {
+        this.wizardId = options.wizardId;
+        this.storageKey = options.storageKey || `wizard_${options.wizardId}`;
+        this.storage = sessionStorage;
+        this.currentStep = 1;
+        this.totalSteps = options.totalSteps || 3;
+
+        this.init();
+    }
+
+    init() {
+        // Restore current step and data
+        this.restore();
+
+        // Save on step navigation
+        document.querySelectorAll('[data-wizard-next]').forEach(btn => {
+            btn.addEventListener('click', () => this.saveStep());
+        });
+
+        document.querySelectorAll('[data-wizard-prev]').forEach(btn => {
+            btn.addEventListener('click', () => this.saveStep());
+        });
+    }
+
+    /**
+     * Save current step data
+     */
+    saveStep() {
+        const data = this.getAllData();
+        const stepForm = document.querySelector(`#step-${this.currentStep} form, #step-${this.currentStep}`);
+
+        if (stepForm) {
+            const formData = new FormData(stepForm.tagName === 'FORM' ? stepForm : stepForm.querySelector('form'));
+            for (const [name, value] of formData.entries()) {
+                if (name !== 'csrfmiddlewaretoken') {
+                    data[name] = value;
+                }
+            }
+        }
+
+        data._currentStep = this.currentStep;
+        data._savedAt = Date.now();
+
+        this.storage.setItem(this.storageKey, JSON.stringify(data));
+    }
+
+    /**
+     * Get all saved data
+     */
+    getAllData() {
+        const saved = this.storage.getItem(this.storageKey);
+        return saved ? JSON.parse(saved) : {};
+    }
+
+    /**
+     * Restore wizard state
+     */
+    restore() {
+        const data = this.getAllData();
+
+        if (data._currentStep) {
+            this.currentStep = data._currentStep;
+            this.showStep(this.currentStep);
+        }
+
+        // Restore form values
+        for (const [name, value] of Object.entries(data)) {
+            if (name.startsWith('_')) continue;
+
+            const field = document.querySelector(`[name="${name}"]`);
+            if (field) {
+                if (field.type === 'checkbox') {
+                    field.checked = value === 'on' || value === true;
+                } else if (field.type === 'radio') {
+                    const radio = document.querySelector(`[name="${name}"][value="${value}"]`);
+                    if (radio) radio.checked = true;
+                } else {
+                    field.value = value;
+                }
+            }
+        }
+    }
+
+    /**
+     * Show specific step
+     */
+    showStep(step) {
+        document.querySelectorAll('[data-wizard-step]').forEach(el => {
+            el.classList.toggle('d-none', parseInt(el.dataset.wizardStep) !== step);
+        });
+
+        // Update progress indicator
+        this.updateProgress(step);
+    }
+
+    /**
+     * Update progress bar
+     */
+    updateProgress(step) {
+        const progress = (step / this.totalSteps) * 100;
+        const progressBar = document.querySelector('.wizard-progress-bar');
+        if (progressBar) {
+            progressBar.style.width = `${progress}%`;
+            progressBar.setAttribute('aria-valuenow', progress);
+        }
+
+        // Update step indicators
+        document.querySelectorAll('.wizard-step-indicator').forEach((indicator, index) => {
+            indicator.classList.toggle('active', index + 1 === step);
+            indicator.classList.toggle('completed', index + 1 < step);
+        });
+    }
+
+    /**
+     * Go to next step
+     */
+    nextStep() {
+        if (this.currentStep < this.totalSteps) {
+            this.saveStep();
+            this.currentStep++;
+            this.showStep(this.currentStep);
+        }
+    }
+
+    /**
+     * Go to previous step
+     */
+    prevStep() {
+        if (this.currentStep > 1) {
+            this.saveStep();
+            this.currentStep--;
+            this.showStep(this.currentStep);
+        }
+    }
+
+    /**
+     * Clear all wizard data
+     */
+    clear() {
+        this.storage.removeItem(this.storageKey);
+        this.currentStep = 1;
+    }
+
+    /**
+     * Get data for final submission
+     */
+    getFinalData() {
+        this.saveStep();
+        const data = this.getAllData();
+
+        // Remove metadata
+        delete data._currentStep;
+        delete data._savedAt;
+
+        return data;
+    }
+}
+```
+
+#### Pattern 5: AJAX Form with State Persistence
+
+```javascript
+// For forms submitted via AJAX, persist state and clear on success
+
+async function submitFormWithPersistence(formId, url) {
+    const form = document.getElementById(formId);
+    const formPersist = new FormPersistence({ formId: formId });
+    const submitBtn = form.querySelector('[type="submit"]');
+
+    // Disable button and show loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+
+    try {
+        const formData = new FormData(form);
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': formData.get('csrfmiddlewaretoken'),
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // ⭐ Clear persisted data on successful submit
+            formPersist.clear();
+
+            // Show success message
+            showToast('Saved successfully!', 'success');
+
+            // Redirect if URL provided
+            if (data.redirect_url) {
+                window.location.href = data.redirect_url;
+            }
+        } else {
+            // ⭐ Keep persisted data on error - user can fix and retry
+            showToast(data.error || 'Please fix the errors below.', 'danger');
+
+            // Display field errors
+            if (data.errors) {
+                displayFieldErrors(form, data.errors);
+            }
+        }
+
+    } catch (error) {
+        console.error('Submit error:', error);
+        showToast('Network error. Your data has been saved locally.', 'warning');
+        // ⭐ Data remains persisted for retry
+    } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = 'Save';
+    }
+}
+
+function displayFieldErrors(form, errors) {
+    // Clear previous errors
+    form.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+    form.querySelectorAll('.invalid-feedback').forEach(el => el.remove());
+
+    // Display new errors
+    for (const [field, messages] of Object.entries(errors)) {
+        const input = form.querySelector(`[name="${field}"]`);
+        if (input) {
+            input.classList.add('is-invalid');
+            const feedback = document.createElement('div');
+            feedback.className = 'invalid-feedback';
+            feedback.textContent = messages[0];
+            input.parentNode.appendChild(feedback);
+        }
+    }
+
+    // Scroll to first error
+    const firstError = form.querySelector('.is-invalid');
+    if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstError.focus();
+    }
+}
+```
+
+#### Form State Persistence Checklist
+
+**Server-Side (Django):**
+- ✅ Use Django's bound form mechanism (automatic value retention)
+- ✅ Password fields use `PasswordInput` widget (never retains value)
+- ✅ File fields show "currently" file if exists (for edit forms)
+- ✅ Form errors displayed next to relevant fields
+
+**Client-Side (JavaScript):**
+- ✅ `FormPersistence` class initialized for important forms
+- ✅ Data saved on input change (debounced)
+- ✅ Data restored on page load
+- ✅ Data cleared on successful submit
+- ✅ Sensitive fields excluded (passwords, CSRF tokens)
+- ✅ File inputs excluded (can't persist in storage)
+- ✅ Visual indicator shown when data restored
+- ✅ Clear/reset button available
+
+**Multi-Step Forms:**
+- ✅ Each step's data saved before navigation
+- ✅ Current step tracked in storage
+- ✅ Progress indicator shows completed steps
+- ✅ User can navigate back without losing data
+- ✅ All data combined for final submission
+
+**Security Considerations:**
+- ✅ NEVER persist passwords or sensitive credentials
+- ✅ Use `sessionStorage` for sensitive forms (cleared on browser close)
+- ✅ Use `localStorage` only for non-sensitive draft data
+- ✅ Add `data-no-persist="true"` to exclude specific fields
+- ✅ Set expiry time (24 hours max) for persisted data
+
 ---
 
 ## Section 15: Database Optimization Patterns

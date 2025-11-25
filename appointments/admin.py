@@ -99,7 +99,7 @@ class AppointmentAdmin(admin.ModelAdmin):
     date_hierarchy = 'appointment_date'
     readonly_fields = [
         'appointment_id',
-        'booked_at',
+        'created_at',
         'confirmed_at',
         'completed_at',
         'cancelled_at',
@@ -122,7 +122,7 @@ class AppointmentAdmin(admin.ModelAdmin):
             'fields': ('status',)
         }),
         ('Booking Information', {
-            'fields': ('booked_by', 'booked_at'),
+            'fields': ('booked_by', 'created_at'),
             'classes': ('collapse',)
         }),
         ('Confirmation', {
@@ -215,7 +215,7 @@ class WaitlistAdmin(admin.ModelAdmin):
         'appointment_type',
         'is_active',
         'notified',
-        'added_at'
+        'created_at'
     ]
     list_filter = [
         'is_active',
@@ -232,8 +232,8 @@ class WaitlistAdmin(admin.ModelAdmin):
         'doctor__first_name',
         'doctor__last_name'
     ]
-    readonly_fields = ['added_at', 'notified_at']
-    ordering = ['added_at']
+    readonly_fields = ['created_at', 'notified_at']
+    ordering = ['created_at']
 
     fieldsets = (
         ('Patient & Doctor', {
@@ -252,7 +252,7 @@ class WaitlistAdmin(admin.ModelAdmin):
             'fields': ('is_active', 'notified', 'notified_at', 'converted_to_appointment')
         }),
         ('Tracking', {
-            'fields': ('added_at',),
+            'fields': ('created_at',),
             'classes': ('collapse',)
         }),
     )

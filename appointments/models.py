@@ -15,11 +15,12 @@ from django.db import models
 from django.conf import settings
 from detection.models import Patient
 from django.core.validators import MinValueValidator, MaxValueValidator
+from common.models import TimeStampedModel, TimeStampedSoftDeleteModel, ActiveManager
 import uuid
 from datetime import datetime, timedelta
 
 
-class DoctorSchedule(models.Model):
+class DoctorSchedule(TimeStampedModel):
     """
     Define doctor's working hours and availability.
 
@@ -78,12 +79,16 @@ class DoctorSchedule(models.Model):
         return f"{self.doctor.get_full_name()} - {self.get_day_of_week_display()} {self.start_time}-{self.end_time}"
 
 
-class Appointment(models.Model):
+class Appointment(TimeStampedSoftDeleteModel):
     """
     Individual appointment instances.
 
     This model represents a specific appointment between a patient and doctor
     at a specific date and time.
+
+    Inherits from TimeStampedSoftDeleteModel:
+    - Timestamps: created_at (booking time), updated_at
+    - Soft delete: is_deleted, deleted_at, deleted_by
 
     Attributes:
         appointment_id: Unique UUID identifier
@@ -164,7 +169,7 @@ class Appointment(models.Model):
         null=True,
         related_name='booked_appointments'
     )
-    booked_at = models.DateTimeField(auto_now_add=True)
+    # Note: booked_at is now created_at (inherited from TimeStampedSoftDeleteModel)
 
     # Confirmation
     confirmed_at = models.DateTimeField(null=True, blank=True)
@@ -220,12 +225,15 @@ class Appointment(models.Model):
         super().save(*args, **kwargs)
 
 
-class AppointmentReminder(models.Model):
+class AppointmentReminder(TimeStampedModel):
     """
     Track appointment reminders.
 
     This model stores scheduled reminders for appointments
     to reduce no-shows.
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
 
     Attributes:
         appointment: The appointment this reminder is for
@@ -257,12 +265,15 @@ class AppointmentReminder(models.Model):
         return f"Reminder for {self.appointment.appointment_id} - {self.reminder_type}"
 
 
-class Waitlist(models.Model):
+class Waitlist(TimeStampedModel):
     """
     Manage waitlist for fully booked slots.
 
     When all appointment slots are full, patients can join
     a waitlist and be notified when slots become available.
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (added_at), updated_at
 
     Attributes:
         patient: The patient on the waitlist
@@ -292,7 +303,7 @@ class Waitlist(models.Model):
 
     # Status
     is_active = models.BooleanField(default=True)
-    added_at = models.DateTimeField(auto_now_add=True)
+    # Note: added_at is now created_at (inherited from TimeStampedModel)
     notified = models.BooleanField(default=False)
     notified_at = models.DateTimeField(null=True, blank=True)
 
@@ -306,7 +317,7 @@ class Waitlist(models.Model):
     )
 
     class Meta:
-        ordering = ['added_at']
+        ordering = ['created_at']
         verbose_name = "Waitlist Entry"
         verbose_name_plural = "Waitlist Entries"
 
@@ -314,12 +325,15 @@ class Waitlist(models.Model):
         return f"{self.patient.user.get_full_name()} - Waitlist for {self.doctor.get_full_name()}"
 
 
-class DoctorLeave(models.Model):
+class DoctorLeave(TimeStampedModel):
     """
     Track doctor leaves/holidays to block appointments.
 
     This model prevents appointments from being booked
     when doctors are on leave.
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
 
     Attributes:
         doctor: The doctor taking leave
@@ -339,7 +353,7 @@ class DoctorLeave(models.Model):
     reason = models.CharField(max_length=200, blank=True)
     is_approved = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Timestamps inherited from TimeStampedModel: created_at, updated_at
 
     class Meta:
         ordering = ['-start_date']

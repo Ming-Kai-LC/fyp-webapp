@@ -32,7 +32,7 @@ class NotificationLogInline(admin.TabularInline):
     """
     model = NotificationLog
     extra = 0
-    readonly_fields = ['attempted_at', 'success', 'channel', 'error_details', 'provider', 'provider_response']
+    readonly_fields = ['created_at', 'success', 'channel', 'error_details', 'provider', 'provider_response']
     can_delete = False
 
 
@@ -116,15 +116,15 @@ class NotificationLogAdmin(admin.ModelAdmin):
     """
     Admin interface for notification logs
     """
-    list_display = ['notification', 'channel', 'success', 'attempted_at', 'provider']
-    list_filter = ['success', 'channel', 'provider', 'attempted_at']
+    list_display = ['notification', 'channel', 'success', 'created_at', 'provider']
+    list_filter = ['success', 'channel', 'provider', 'created_at']
     search_fields = ['notification__title', 'error_details', 'provider_response']
-    readonly_fields = ['attempted_at']
-    date_hierarchy = 'attempted_at'
+    readonly_fields = ['created_at']
+    date_hierarchy = 'created_at'
 
     fieldsets = (
         ('Log Information', {
-            'fields': ('notification', 'attempted_at', 'success', 'channel')
+            'fields': ('notification', 'created_at', 'success', 'channel')
         }),
         ('Provider Details', {
             'fields': ('provider', 'provider_response'),

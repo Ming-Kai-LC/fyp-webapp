@@ -115,27 +115,27 @@ class XRayImageAdmin(admin.ModelAdmin):
     list_display = [
         "id",
         "patient_name",
-        "uploaded_by",
-        "upload_date",
+        "created_by",
+        "created_at",
         "image_thumbnail",
         "has_predictions",
     ]
-    list_filter = ["upload_date"]
-    search_fields = ["patient__user__username", "uploaded_by__username", "notes"]
+    list_filter = ["created_at"]
+    search_fields = ["patient__user__username", "created_by__username", "notes"]
     readonly_fields = [
-        "upload_date",
+        "created_at",
         "image_width",
         "image_height",
         "file_size",
         "original_image_preview",
         "processed_image_preview",
     ]
-    date_hierarchy = "upload_date"
+    date_hierarchy = "created_at"
 
     fieldsets = (
         (
             "Patient & Upload Info",
-            {"fields": ("patient", "uploaded_by", "upload_date")},
+            {"fields": ("patient", "created_by", "created_at")},
         ),
         (
             "Images",
@@ -209,7 +209,7 @@ class XRayImageAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        return qs.select_related("patient__user", "uploaded_by")
+        return qs.select_related("patient__user", "created_by")
 
 
 @admin.register(Prediction)
@@ -457,7 +457,7 @@ class PredictionAdmin(admin.ModelAdmin):
         """Optimize queries"""
         qs = super().get_queryset(request)
         return qs.select_related(
-            "xray__patient__user", "xray__uploaded_by", "reviewed_by"
+            "xray__patient__user", "xray__created_by", "reviewed_by"
         )
 
     # Custom actions

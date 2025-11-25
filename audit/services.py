@@ -89,7 +89,7 @@ class ComplianceReportGenerator:
         Generate GDPR compliance report
         """
         audit_logs = AuditLog.objects.filter(
-            timestamp__range=[self.start_date, self.end_date]
+            created_at__range=[self.start_date, self.end_date]
         )
 
         summary = {
@@ -102,12 +102,12 @@ class ComplianceReportGenerator:
         details = {
             'export_requests': list(
                 audit_logs.filter(action_type='export').values(
-                    'username', 'action_description', 'timestamp'
+                    'username', 'action_description', 'created_at'
                 )
             ),
             'deletion_requests': list(
                 audit_logs.filter(action_type='delete').values(
-                    'username', 'action_description', 'timestamp'
+                    'username', 'action_description', 'created_at'
                 )
             ),
         }
@@ -148,7 +148,7 @@ class ComplianceReportGenerator:
         Generate security audit report
         """
         login_attempts = LoginAttempt.objects.filter(
-            timestamp__range=[self.start_date, self.end_date]
+            created_at__range=[self.start_date, self.end_date]
         )
 
         security_alerts = SecurityAlert.objects.filter(
@@ -183,7 +183,7 @@ class ComplianceReportGenerator:
         Generate user activity report
         """
         audit_logs = AuditLog.objects.filter(
-            timestamp__range=[self.start_date, self.end_date]
+            created_at__range=[self.start_date, self.end_date]
         )
 
         summary = {
@@ -199,9 +199,9 @@ class ComplianceReportGenerator:
                 ).order_by('-count')[:20]
             ),
             'action_timeline': list(
-                audit_logs.values('timestamp__date', 'action_type').annotate(
+                audit_logs.values('created_at__date', 'action_type').annotate(
                     count=Count('id')
-                ).order_by('timestamp__date')
+                ).order_by('created_at__date')
             ),
         }
 
@@ -224,9 +224,9 @@ class AuditExporter:
         logs = AuditLog.objects.all()
 
         if self.date_from:
-            logs = logs.filter(timestamp__gte=self.date_from)
+            logs = logs.filter(created_at__gte=self.date_from)
         if self.date_to:
-            logs = logs.filter(timestamp__lte=self.date_to)
+            logs = logs.filter(created_at__lte=self.date_to)
         if self.action_type:
             logs = logs.filter(action_type=self.action_type)
 
@@ -243,7 +243,7 @@ class AuditExporter:
         # Data
         for log in logs:
             writer.writerow([
-                log.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+                log.created_at.strftime('%Y-%m-%d %H:%M:%S'),
                 log.username,
                 log.action_type,
                 log.action_description,
@@ -273,7 +273,7 @@ class SecurityMonitor:
         failed_attempts = LoginAttempt.objects.filter(
             username=username,
             success=False,
-            timestamp__gte=one_hour_ago
+            created_at__gte=one_hour_ago
         ).count()
 
         if failed_attempts >= 5:

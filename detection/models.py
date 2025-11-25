@@ -10,18 +10,28 @@ from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
 
+from common.models import TimeStampedModel, FullAuditModel, ActiveManager
+from .constants import (
+    GenderChoices,
+    RoleChoices,
+    DiagnosisChoices,
+    ValidationLimits,
+)
 
-class UserProfile(models.Model):
-    """
-    Extended user information with role-based access control
-    Roles: admin, staff, patient
-    """
 
-    ROLE_CHOICES = [
-        ("admin", "Administrator"),
-        ("staff", "Staff"),
-        ("patient", "Patient"),
-    ]
+class UserProfile(TimeStampedModel):
+    """
+    Extended user information with role-based access control.
+
+    Roles:
+        - admin: Full system access
+        - staff: Medical staff with patient management
+        - patient: Self-service patient access
+
+    Inherits from TimeStampedModel:
+        - created_at: Auto-set on creation
+        - updated_at: Auto-set on save
+    """
 
     user = models.OneToOneField(
         User,
@@ -31,44 +41,58 @@ class UserProfile(models.Model):
     )
     role = models.CharField(
         max_length=20,
-        choices=ROLE_CHOICES,
-        default="patient",
+        choices=RoleChoices.CHOICES,
+        default=RoleChoices.PATIENT,
         help_text="User role for access control",
     )
     phone = models.CharField(
         max_length=15, blank=True, help_text="Contact phone number"
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    profile_picture = models.ImageField(
+        upload_to="profiles/%Y/%m/",
+        blank=True,
+        null=True,
+        help_text="User profile picture (max 5MB, JPEG/PNG format recommended)",
+    )
+    email_verified = models.BooleanField(
+        default=False, help_text="Whether user email has been verified"
+    )
+    # Timestamps inherited from TimeStampedModel: created_at, updated_at
 
     class Meta:
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
         ordering = ["-created_at"]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f"{self.user.username} ({self.get_role_display()})"
 
-    def is_admin(self):
-        return self.role == "admin"
+    def is_admin(self) -> bool:
+        """Check if user has admin role."""
+        return self.role == RoleChoices.ADMIN
 
-    def is_staff(self):
-        return self.role == "staff"
+    def is_staff(self) -> bool:
+        """Check if user has staff role."""
+        return self.role == RoleChoices.STAFF
 
-    def is_patient(self):
-        return self.role == "patient"
+    def is_patient(self) -> bool:
+        """Check if user has patient role."""
+        return self.role == RoleChoices.PATIENT
 
 
-class Patient(models.Model):
+class Patient(FullAuditModel):
     """
-    Patient medical information and demographics
-    """
+    Patient medical information and demographics.
 
-    GENDER_CHOICES = [
-        ("M", "Male"),
-        ("F", "Female"),
-        ("O", "Other"),
-    ]
+    Inherits from FullAuditModel for complete audit trail:
+        - Timestamps: created_at, updated_at
+        - Audit: created_by, updated_by
+        - Soft delete: is_deleted, deleted_at, deleted_by
+
+    Uses constants from detection.constants:
+        - GenderChoices for gender field
+        - ValidationLimits for age constraints
+    """
 
     user = models.OneToOneField(
         User,
@@ -77,11 +101,17 @@ class Patient(models.Model):
         help_text="Linked user account",
     )
     age = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(120)],
-        help_text="Patient age in years",
+        validators=[
+            MinValueValidator(ValidationLimits.MIN_AGE),
+            MaxValueValidator(ValidationLimits.MAX_AGE),
+        ],
+        help_text="Patient age in years (0-120)",
     )
     gender = models.CharField(
-        max_length=1, choices=GENDER_CHOICES, help_text="Patient gender"
+        max_length=1,
+        choices=GenderChoices.CHOICES,
+        default=GenderChoices.OTHER,
+        help_text="Patient gender",
     )
     date_of_birth = models.DateField(null=True, blank=True)
 
@@ -99,9 +129,7 @@ class Patient(models.Model):
     )
     address = models.TextField(blank=True)
 
-    # Metadata
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # Timestamps, audit trail, and soft delete inherited from FullAuditModel
 
     class Meta:
         verbose_name = "Patient"
@@ -123,9 +151,13 @@ class Patient(models.Model):
         return self.xrays.filter(predictions__final_diagnosis="COVID").count()
 
 
-class XRayImage(models.Model):
+class XRayImage(FullAuditModel):
     """
     Uploaded chest X-ray images with preprocessing
+    Inherits from FullAuditModel for complete audit trail:
+    - Timestamps: created_at (upload time), updated_at
+    - Audit: created_by (uploader), updated_by
+    - Soft delete: is_deleted, deleted_at, deleted_by
     """
 
     patient = models.ForeignKey(
@@ -134,13 +166,7 @@ class XRayImage(models.Model):
         related_name="xrays",
         help_text="Patient this X-ray belongs to",
     )
-    uploaded_by = models.ForeignKey(
-        User,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="uploaded_xrays",
-        help_text="Doctor/staff who uploaded the image",
-    )
+    # Note: uploaded_by is now created_by (inherited from FullAuditModel)
 
     # Images
     original_image = models.ImageField(
@@ -154,7 +180,7 @@ class XRayImage(models.Model):
     )
 
     # Metadata
-    upload_date = models.DateTimeField(auto_now_add=True)
+    # Note: upload_date is now created_at (inherited from FullAuditModel)
     notes = models.TextField(blank=True, help_text="Clinical notes or observations")
 
     # Image properties (auto-populated)
@@ -167,10 +193,10 @@ class XRayImage(models.Model):
     class Meta:
         verbose_name = "X-Ray Image"
         verbose_name_plural = "X-Ray Images"
-        ordering = ["-upload_date"]
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"X-ray for {self.patient.user.username} - {self.upload_date.strftime('%Y-%m-%d %H:%M')}"
+        return f"X-ray for {self.patient.user.username} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
 
     def save(self, *args, **kwargs):
         """Auto-populate image properties on save"""
@@ -183,18 +209,20 @@ class XRayImage(models.Model):
         super().save(*args, **kwargs)
 
 
-class Prediction(models.Model):
+class Prediction(FullAuditModel):
     """
-    🌟 SPOTLIGHT 1: Multi-Model Predictions
-    Stores predictions from all 6 AI models for comparison
-    """
+    Multi-Model Predictions - Stores predictions from all 6 AI models for comparison.
 
-    CLASS_CHOICES = [
-        ("COVID", "COVID-19"),
-        ("Normal", "Normal"),
-        ("Viral Pneumonia", "Viral Pneumonia"),
-        ("Lung Opacity", "Lung Opacity"),
-    ]
+    Inherits from FullAuditModel for complete audit trail:
+        - Timestamps: created_at (prediction time), updated_at
+        - Audit: created_by (who triggered prediction), updated_by
+        - Soft delete: is_deleted, deleted_at, deleted_by
+
+    Uses constants from detection.constants:
+        - DiagnosisChoices for diagnosis field
+
+    Note: reviewed_by is separate from created_by (doctor review vs system creation)
+    """
 
     xray = models.ForeignKey(
         XRayImage,
@@ -244,7 +272,9 @@ class Prediction(models.Model):
 
     # ===== Final Diagnosis (Consensus) =====
     final_diagnosis = models.CharField(
-        max_length=50, choices=CLASS_CHOICES, help_text="Final consensus diagnosis"
+        max_length=50,
+        choices=DiagnosisChoices.CHOICES,
+        help_text="Final consensus diagnosis",
     )
     consensus_confidence = models.FloatField(
         help_text="Confidence of final diagnosis (average or weighted)"
@@ -276,7 +306,7 @@ class Prediction(models.Model):
     )
 
     # ===== Review and Validation =====
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Note: created_at and created_by inherited from FullAuditModel
     reviewed_by = models.ForeignKey(
         User,
         on_delete=models.SET_NULL,

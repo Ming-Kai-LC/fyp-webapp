@@ -32,9 +32,9 @@ def audit_log_list(request):
         if form.cleaned_data.get('severity'):
             logs = logs.filter(severity=form.cleaned_data['severity'])
         if form.cleaned_data.get('date_from'):
-            logs = logs.filter(timestamp__gte=form.cleaned_data['date_from'])
+            logs = logs.filter(created_at__gte=form.cleaned_data['date_from'])
         if form.cleaned_data.get('date_to'):
-            logs = logs.filter(timestamp__lte=form.cleaned_data['date_to'])
+            logs = logs.filter(created_at__lte=form.cleaned_data['date_to'])
         if form.cleaned_data.get('search'):
             search = form.cleaned_data['search']
             logs = logs.filter(
@@ -111,7 +111,7 @@ def login_attempts_list(request):
     recent = request.GET.get('recent')
     if recent:
         yesterday = timezone.now() - timedelta(days=1)
-        attempts = attempts.filter(timestamp__gte=yesterday)
+        attempts = attempts.filter(created_at__gte=yesterday)
 
     # Statistics
     total_attempts = LoginAttempt.objects.count()
@@ -284,7 +284,7 @@ def my_access_history(request):
         return redirect('detection:home')
 
     # Get user's own audit logs
-    my_logs = AuditLog.objects.filter(user=request.user).order_by('-timestamp')[:100]
+    my_logs = AuditLog.objects.filter(user=request.user).order_by('-created_at')[:100]
 
     # Get data access logs (if patient)
     my_data_accesses = None

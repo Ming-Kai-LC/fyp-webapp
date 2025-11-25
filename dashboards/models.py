@@ -6,11 +6,15 @@ Store user dashboard customization preferences and widget definitions
 
 from django.db import models
 from django.conf import settings
+from common.models import TimeStampedModel
 
 
-class DashboardPreference(models.Model):
+class DashboardPreference(TimeStampedModel):
     """
     Store user dashboard customization preferences
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -42,7 +46,7 @@ class DashboardPreference(models.Model):
         help_text="Auto-refresh interval in seconds"
     )
 
-    updated_at = models.DateTimeField(auto_now=True)
+    # updated_at inherited from TimeStampedModel
 
     class Meta:
         verbose_name = "Dashboard Preference"
@@ -52,9 +56,12 @@ class DashboardPreference(models.Model):
         return f"{self.user.username} - Dashboard Preferences"
 
 
-class DashboardWidget(models.Model):
+class DashboardWidget(TimeStampedModel):
     """
     Define available dashboard widgets
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     WIDGET_TYPES = (
         ('statistics', 'Statistics Card'),
@@ -88,7 +95,7 @@ class DashboardWidget(models.Model):
 
     # Metadata
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # created_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['default_position']

@@ -79,10 +79,10 @@ class FamilyHistoryAdmin(admin.ModelAdmin):
 @admin.register(MedicalDocument)
 class MedicalDocumentAdmin(admin.ModelAdmin):
     list_display = ['title', 'patient', 'document_type', 'document_date', 'is_sensitive', 'version']
-    list_filter = ['document_type', 'is_sensitive', 'document_date', 'uploaded_at']
+    list_filter = ['document_type', 'is_sensitive', 'document_date', 'created_at']
     search_fields = ['title', 'patient__user__username', 'extracted_text']
     date_hierarchy = 'document_date'
-    readonly_fields = ['document_id', 'file_size', 'uploaded_at']
+    readonly_fields = ['document_id', 'file_size', 'created_at']
 
     fieldsets = (
         ('Basic Information', {
@@ -99,7 +99,7 @@ class MedicalDocumentAdmin(admin.ModelAdmin):
             'classes': ('collapse',)
         }),
         ('Metadata', {
-            'fields': ('document_id', 'uploaded_by', 'uploaded_at'),
+            'fields': ('document_id', 'created_by', 'created_at'),
             'classes': ('collapse',)
         }),
     )
@@ -110,16 +110,16 @@ class LifestyleInformationAdmin(admin.ModelAdmin):
     list_display = ['patient', 'smoking_status', 'alcohol_use', 'exercise_level', 'occupational_exposure_risk']
     list_filter = ['smoking_status', 'alcohol_use', 'exercise_level', 'occupational_exposure_risk']
     search_fields = ['patient__user__username', 'occupation']
-    readonly_fields = ['last_updated']
+    readonly_fields = ['updated_at']
 
 
 @admin.register(COVIDRiskScore)
 class COVIDRiskScoreAdmin(admin.ModelAdmin):
-    list_display = ['patient', 'risk_level', 'total_score', 'calculated_at']
-    list_filter = ['risk_level', 'calculated_at']
+    list_display = ['patient', 'risk_level', 'total_score', 'created_at']
+    list_filter = ['risk_level', 'created_at']
     search_fields = ['patient__user__username']
-    date_hierarchy = 'calculated_at'
-    readonly_fields = ['calculated_at']
+    date_hierarchy = 'created_at'
+    readonly_fields = ['created_at']
 
     fieldsets = (
         ('Patient & Risk Level', {
@@ -132,7 +132,7 @@ class COVIDRiskScoreAdmin(admin.ModelAdmin):
             'fields': ('risk_factors', 'recommendations')
         }),
         ('Metadata', {
-            'fields': ('calculated_by', 'calculated_at'),
+            'fields': ('calculated_by', 'created_at'),
             'classes': ('collapse',)
         }),
     )

@@ -1,6 +1,6 @@
 ---
 name: Dual-Layer Validation
-description: Enforces both server-side and client-side validation for all user inputs. Server-side validation is MANDATORY for security, client-side validation is MANDATORY for UX. Auto-applies to all forms, APIs, and user input handling.
+description: Enforces both server-side and client-side validation for all user inputs. Server-side validation is MANDATORY for security, client-side validation is MANDATORY for UX. Includes input normalization (strip, lowercase, titlecase) on both layers. Auto-applies to all forms, APIs, and user input handling.
 ---
 
 # Dual-Layer Validation
@@ -963,6 +963,185 @@ def validate_password_strength(password: str) -> tuple[bool, Optional[str]]:
 - ✅ Validation rules are consistent between client and server
 - ✅ Server-side validation is NEVER bypassed
 - ✅ Client-side validation enhances UX but doesn't replace security
+- ✅ **Input normalization applied on BOTH layers** (strip, lowercase, titlecase)
+
+---
+
+## Part 5: Input Normalization (Dual-Layer)
+
+**Principle:** Normalize inputs on BOTH client-side AND server-side to ensure consistent data storage and case-insensitive matching.
+
+### Why Normalize?
+
+1. **Consistency** - "JohnDoe", "johndoe", "JOHNDOE" should all match the same user
+2. **UX** - Users shouldn't worry about capitalization
+3. **Data Quality** - Clean, standardized data in database
+4. **Security** - Prevents case-based duplicates (e.g., "Admin" vs "admin")
+
+### Normalization Rules by Field Type
+
+| Field Type | Normalization | Server-Side | Client-Side |
+|------------|---------------|-------------|-------------|
+| **Username** | Strip + Lowercase | `.strip().lower()` | `normalize: 'lowercase'` |
+| **Email** | Strip + Lowercase | `.strip().lower()` | `normalize: 'lowercase'` |
+| **First/Last Name** | Strip + Title Case | `.strip().title()` | `normalize: 'titlecase'` |
+| **Phone** | Strip + Remove spaces | `.strip().replace(' ', '')` | `normalize: 'phone'` |
+| **Password** | NO normalization | Keep as-is | Keep as-is |
+
+### Server-Side Normalization (Python)
+
+```python
+def clean_username(self):
+    """
+    Normalize username before validation.
+
+    Normalization:
+        - Strip leading/trailing whitespace
+        - Convert to lowercase (usernames are case-insensitive)
+    """
+    username = self.cleaned_data.get('username', '').strip().lower()
+
+    # Case-insensitive uniqueness check
+    if User.objects.filter(username__iexact=username).exists():
+        raise ValidationError("Username already taken.")
+
+    return username  # Returns normalized value
+
+
+def clean_email(self):
+    """
+    Normalize email before validation.
+
+    Normalization:
+        - Strip leading/trailing whitespace
+        - Convert to lowercase (emails are case-insensitive per RFC 5321)
+    """
+    email = self.cleaned_data.get('email', '').strip().lower()
+
+    # Case-insensitive uniqueness check
+    if User.objects.filter(email__iexact=email).exists():
+        raise ValidationError("Email already registered.")
+
+    return email  # Returns normalized value
+
+
+def clean_first_name(self):
+    """
+    Normalize first name before validation.
+
+    Normalization:
+        - Strip leading/trailing whitespace
+        - Convert to title case (e.g., "john" -> "John")
+    """
+    first_name = self.cleaned_data.get('first_name', '').strip()
+
+    if not first_name:
+        raise ValidationError("First name is required.")
+
+    # Normalize to title case
+    return first_name.title()
+```
+
+### Client-Side Normalization (JavaScript)
+
+```javascript
+/**
+ * FormValidator with normalization support.
+ *
+ * Normalization options:
+ *   - 'lowercase': Convert to lowercase (for username, email)
+ *   - 'titlecase': Convert to title case (for names)
+ *   - 'phone': Remove spaces (for phone numbers)
+ */
+const validator = new FormValidator('registrationForm', {
+    username: {
+        required: true,
+        normalize: 'lowercase',  // Applied on blur and submit
+        // ...
+    },
+    email: {
+        required: true,
+        type: 'email',
+        normalize: 'lowercase',
+        // ...
+    },
+    first_name: {
+        required: true,
+        normalize: 'titlecase',
+        // ...
+    }
+});
+
+// Normalization is applied:
+// 1. On blur (when user leaves the field)
+// 2. Before form submission
+// 3. Before validation
+```
+
+### Implementation in FormValidator Class
+
+```javascript
+/**
+ * Normalize a single field value.
+ */
+normalizeField(fieldName) {
+    const field = this.fields[fieldName];
+    const config = this.fieldConfigs[fieldName];
+
+    if (!field || !config) return;
+
+    let value = field.value;
+
+    // Always trim whitespace
+    value = value.trim();
+
+    // Apply specific normalization
+    if (config.normalize === 'lowercase') {
+        value = value.toLowerCase();
+    } else if (config.normalize === 'titlecase') {
+        value = this.toTitleCase(value);
+    }
+
+    // Update field value (user sees normalized value)
+    field.value = value;
+}
+
+/**
+ * Convert string to title case.
+ * Handles: "john doe" -> "John Doe", "o'brien" -> "O'Brien"
+ */
+toTitleCase(str) {
+    return str.replace(/\b\w+/g, (word) => {
+        return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+    });
+}
+```
+
+### Normalization Checklist
+
+**Before Deploying ANY Form:**
+
+- ✅ Username: Server `.strip().lower()` + Client `normalize: 'lowercase'`
+- ✅ Email: Server `.strip().lower()` + Client `normalize: 'lowercase'`
+- ✅ Names: Server `.strip().title()` + Client `normalize: 'titlecase'`
+- ✅ Uniqueness checks use `__iexact` for case-insensitive matching
+- ✅ Password fields are NEVER normalized
+- ✅ Normalization happens BEFORE validation on both layers
+
+### Anti-Pattern: Server-Only Normalization
+
+```python
+# ❌ WRONG - Server normalizes but client doesn't
+def clean_username(self):
+    return self.cleaned_data.get('username', '').strip().lower()
+```
+
+```javascript
+// ❌ Client shows "JohnDoe" but server saves "johndoe"
+// User is confused when they can't login with "JohnDoe"
+```
+
+**Fix:** Always normalize on BOTH layers so user sees the normalized value before submission.
 
 ---
 

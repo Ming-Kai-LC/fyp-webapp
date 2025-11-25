@@ -1,300 +1,268 @@
 {% extends 'base.html' %}
-{% load crispy_forms_tags %}
+{% load static %}
 
 {% block title %}Patient Registration - COVID-19 Detection System{% endblock %}
 
 {% block extra_css %}
-<style>
-    /* Password Strength Meter */
-    .password-strength-meter {
-        height: 5px;
-        background: #e9ecef;
-        border-radius: 3px;
-        margin-top: 8px;
-        overflow: hidden;
-        transition: all 0.3s ease;
-    }
-
-    .password-strength-bar {
-        height: 100%;
-        width: 0%;
-        transition: all 0.3s ease;
-    }
-
-    .password-strength-bar.weak {
-        width: 33%;
-        background: #dc3545;
-    }
-
-    .password-strength-bar.medium {
-        width: 66%;
-        background: #ffc107;
-    }
-
-    .password-strength-bar.strong {
-        width: 100%;
-        background: #198754;
-    }
-
-    .password-strength-text {
-        font-size: 0.875rem;
-        margin-top: 5px;
-        font-weight: 500;
-    }
-
-    .password-strength-text.weak {
-        color: #dc3545;
-    }
-
-    .password-strength-text.medium {
-        color: #ffc107;
-    }
-
-    .password-strength-text.strong {
-        color: #198754;
-    }
-
-    /* Validation Icons */
-    .validation-icon {
-        position: absolute;
-        right: 15px;
-        top: 50%;
-        transform: translateY(-50%);
-        font-size: 1.2rem;
-        display: none; /* Hidden by default, controlled by JavaScript */
-    }
-
-    /* Icon colors - visibility is controlled by inline styles via JavaScript */
-    .bi-check-circle-fill {
-        color: #198754;
-    }
-
-    .bi-x-circle-fill {
-        color: #dc3545;
-    }
-
-    .form-group {
-        position: relative;
-        margin-bottom: 1.5rem;
-    }
-
-    /* Field requirement checklist */
-    .password-requirements {
-        font-size: 0.875rem;
-        margin-top: 10px;
-        padding-left: 0;
-        list-style: none;
-    }
-
-    .password-requirements li {
-        padding: 4px 0;
-        color: #6c757d;
-        transition: color 0.2s;
-    }
-
-    .password-requirements li i {
-        margin-right: 8px;
-        font-size: 0.9rem;
-    }
-
-    .password-requirements li.valid {
-        color: #198754;
-    }
-
-    .password-requirements li.invalid {
-        color: #dc3545;
-    }
-
-    /* Enhanced error messages */
-    .invalid-feedback {
-        display: block;
-        font-size: 0.875rem;
-        color: #dc3545;
-        margin-top: 5px;
-    }
-
-    .is-invalid {
-        border-color: #dc3545;
-    }
-
-    .is-valid {
-        border-color: #198754;
-    }
-
-    /* Help text styling */
-    .form-text {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 5px;
-    }
-
-    /* Focus styling */
-    .form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
-    }
-</style>
+{# Reusable form validation styles from foundation components #}
+<link rel="stylesheet" href="{% static 'css/form-validation.css' %}">
 {% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <div class="row justify-content-center">
         <div class="col-md-8 col-lg-6">
-        <div class="card shadow">
-            <div class="card-body p-5">
-                <div class="text-center mb-4">
-                    <i class="bi bi-person-plus display-1 text-primary"></i>
-                    <h2 class="mt-3">Patient Registration</h2>
-                    <p class="text-muted">Create your COVID-19 Detection patient account</p>
-                </div>
+            <div class="card shadow">
+                <div class="card-body p-5">
+                    <!-- Header -->
+                    <div class="text-center mb-4">
+                        <i class="bi bi-person-plus display-1 text-primary" aria-hidden="true"></i>
+                        <h2 class="mt-3">Patient Registration</h2>
+                        <p class="text-muted">Create your COVID-19 Detection patient account</p>
+                    </div>
 
-                <div class="alert alert-info mb-4" role="alert">
-                    <div class="d-flex align-items-start">
-                        <i class="bi bi-info-circle me-2 mt-1"></i>
-                        <div>
-                            <strong>Patient Registration</strong><br>
-                            This form is for patients only. Medical staff accounts must be created by system administrators.
+                    <!-- Info Alert - Using foundation alert pattern -->
+                    <div class="alert alert-info mb-4" role="alert">
+                        <div class="d-flex align-items-start">
+                            <i class="bi bi-info-circle me-2 mt-1" aria-hidden="true"></i>
+                            <div>
+                                <strong>Patient Registration</strong><br>
+                                This form is for patients only. Medical staff accounts must be created by system administrators.
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <!-- Form Errors -->
-                {% if form.errors %}
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Please correct the following errors:</strong>
-                    <ul class="mb-0 mt-2">
-                        {% for field in form %}
-                            {% for error in field.errors %}
-                                <li>{{ field.label }}: {{ error }}</li>
+                    <!-- Server-side validation errors (non-field errors) -->
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle me-2" aria-hidden="true"></i>
+                        <strong>Please correct the following errors:</strong>
+                        <ul class="mb-0 mt-2">
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
                             {% endfor %}
-                        {% endfor %}
-                        {% for error in form.non_field_errors %}
-                            <li>{{ error }}</li>
-                        {% endfor %}
-                    </ul>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-                {% endif %}
-
-                <form method="post" id="registrationForm" novalidate>
-                    {% csrf_token %}
-
-                    <!-- Username -->
-                    <div class="form-group">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">
-                            {{ form.username.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.username }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="username-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="username-invalid"></i>
-                        </div>
-                        <small class="form-text">{{ form.username.help_text }}</small>
-                        <div class="invalid-feedback" id="username-error"></div>
-                    </div>
-
-                    <!-- First Name -->
-                    <div class="form-group">
-                        <label for="{{ form.first_name.id_for_label }}" class="form-label">
-                            {{ form.first_name.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.first_name }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="first_name-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="first_name-invalid"></i>
-                        </div>
-                        <small class="form-text">{{ form.first_name.help_text }}</small>
-                        <div class="invalid-feedback" id="first_name-error"></div>
-                    </div>
-
-                    <!-- Last Name -->
-                    <div class="form-group">
-                        <label for="{{ form.last_name.id_for_label }}" class="form-label">
-                            {{ form.last_name.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.last_name }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="last_name-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="last_name-invalid"></i>
-                        </div>
-                        <small class="form-text">{{ form.last_name.help_text }}</small>
-                        <div class="invalid-feedback" id="last_name-error"></div>
-                    </div>
-
-                    <!-- Email -->
-                    <div class="form-group">
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
-                            {{ form.email.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.email }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="email-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="email-invalid"></i>
-                        </div>
-                        <small class="form-text">{{ form.email.help_text }}</small>
-                        <div class="invalid-feedback" id="email-error"></div>
-                    </div>
-
-                    <!-- Password -->
-                    <div class="form-group">
-                        <label for="{{ form.password1.id_for_label }}" class="form-label">
-                            {{ form.password1.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.password1 }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="password1-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="password1-invalid"></i>
-                        </div>
-
-                        <!-- Password Strength Meter -->
-                        <div class="password-strength-meter">
-                            <div class="password-strength-bar" id="password-strength-bar"></div>
-                        </div>
-                        <div class="password-strength-text" id="password-strength-text"></div>
-
-                        <!-- Password Requirements Checklist -->
-                        <ul class="password-requirements" id="password-requirements">
-                            <li id="req-length">
-                                <i class="bi bi-circle"></i>
-                                At least 8 characters long
-                            </li>
-                            <li id="req-not-numeric">
-                                <i class="bi bi-circle"></i>
-                                Not entirely numeric
-                            </li>
-                            <li id="req-has-letter">
-                                <i class="bi bi-circle"></i>
-                                Contains at least one letter
-                            </li>
                         </ul>
-                        <div class="invalid-feedback" id="password1-error"></div>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
+                    {% endif %}
 
-                    <!-- Confirm Password -->
-                    <div class="form-group">
-                        <label for="{{ form.password2.id_for_label }}" class="form-label">
-                            {{ form.password2.label }} <span class="text-danger">*</span>
-                        </label>
-                        <div class="position-relative">
-                            {{ form.password2 }}
-                            <i class="bi bi-check-circle-fill validation-icon" id="password2-valid"></i>
-                            <i class="bi bi-x-circle-fill validation-icon" id="password2-invalid"></i>
+                    <!-- Registration Form -->
+                    <form method="post" id="registrationForm" novalidate>
+                        {% csrf_token %}
+
+                        <!-- Username -->
+                        <div class="form-group">
+                            <label for="id_username" class="form-label">
+                                Username <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="text"
+                                   name="username"
+                                   id="id_username"
+                                   class="form-control {% if form.username.errors %}is-invalid{% endif %}"
+                                   placeholder="e.g., john_doe or user2024"
+                                   autocomplete="username"
+                                   minlength="3"
+                                   maxlength="150"
+                                   pattern="[a-zA-Z0-9@.+_-]+"
+                                   title="Only letters, digits, and symbols @ . + - _ are allowed"
+                                   value="{{ form.username.value|default:'' }}"
+                                   aria-describedby="username-help username-feedback"
+                                   required>
+                            {% if form.username.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.username.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="username-feedback" role="alert"></div>
+                            <small class="form-text d-block text-muted" id="username-help">
+                                3-150 characters. Use letters (a-z), digits (0-9), and symbols: @ . + - _ only.
+                            </small>
                         </div>
-                        <small class="form-text">{{ form.password2.help_text }}</small>
-                        <div class="invalid-feedback" id="password2-error"></div>
-                    </div>
 
-                    <button type="submit" class="btn btn-primary w-100 mb-3" id="submitBtn">
-                        <i class="bi bi-person-plus"></i> Create Patient Account
-                    </button>
+                        <!-- First Name -->
+                        <div class="form-group">
+                            <label for="id_first_name" class="form-label">
+                                First Name <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="text"
+                                   name="first_name"
+                                   id="id_first_name"
+                                   class="form-control {% if form.first_name.errors %}is-invalid{% endif %}"
+                                   placeholder="e.g., John or Wei Ming"
+                                   autocomplete="given-name"
+                                   minlength="2"
+                                   maxlength="150"
+                                   pattern="[a-zA-Z\s'\-]+"
+                                   title="Only letters, spaces, hyphens, and apostrophes allowed"
+                                   value="{{ form.first_name.value|default:'' }}"
+                                   aria-describedby="first_name-help first_name-feedback"
+                                   required>
+                            {% if form.first_name.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.first_name.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="first_name-feedback" role="alert"></div>
+                            <small class="form-text d-block text-muted" id="first_name-help">
+                                Your legal first name (letters only, at least 2 characters)
+                            </small>
+                        </div>
 
-                    <div class="text-center">
-                        <p class="text-muted">Already have an account?
-                            <a href="{% url 'login' %}">Login here</a>
-                        </p>
-                    </div>
-                </form>
+                        <!-- Last Name -->
+                        <div class="form-group">
+                            <label for="id_last_name" class="form-label">
+                                Last Name <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="text"
+                                   name="last_name"
+                                   id="id_last_name"
+                                   class="form-control {% if form.last_name.errors %}is-invalid{% endif %}"
+                                   placeholder="e.g., Doe or Abdullah"
+                                   autocomplete="family-name"
+                                   minlength="2"
+                                   maxlength="150"
+                                   pattern="[a-zA-Z\s'\-]+"
+                                   title="Only letters, spaces, hyphens, and apostrophes allowed"
+                                   value="{{ form.last_name.value|default:'' }}"
+                                   aria-describedby="last_name-help last_name-feedback"
+                                   required>
+                            {% if form.last_name.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.last_name.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="last_name-feedback" role="alert"></div>
+                            <small class="form-text d-block text-muted" id="last_name-help">
+                                Your legal last name (letters only, at least 2 characters)
+                            </small>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="form-group">
+                            <label for="id_email" class="form-label">
+                                Email <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="email"
+                                   name="email"
+                                   id="id_email"
+                                   class="form-control {% if form.email.errors %}is-invalid{% endif %}"
+                                   placeholder="yourname@example.com"
+                                   autocomplete="email"
+                                   maxlength="254"
+                                   value="{{ form.email.value|default:'' }}"
+                                   aria-describedby="email-help email-feedback"
+                                   required>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.email.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="email-feedback" role="alert"></div>
+                            <small class="form-text d-block text-muted" id="email-help">
+                                Enter a valid email address (e.g., john@gmail.com). We'll use this for important health notifications.
+                            </small>
+                        </div>
+
+                        <!-- Password -->
+                        <div class="form-group">
+                            <label for="id_password1" class="form-label">
+                                Password <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="password"
+                                   name="password1"
+                                   id="id_password1"
+                                   class="form-control {% if form.password1.errors %}is-invalid{% endif %}"
+                                   placeholder="e.g., MyPass123 or SecurePass2024"
+                                   autocomplete="new-password"
+                                   minlength="8"
+                                   aria-describedby="password1-help password1-feedback"
+                                   required>
+                            {% if form.password1.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.password1.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="password1-feedback" role="alert"></div>
+
+                            <!-- Password Strength Meter -->
+                            <div class="password-strength-meter" aria-hidden="true">
+                                <div class="password-strength-bar" id="password-strength-bar"></div>
+                            </div>
+                            <div class="password-strength-text" id="password-strength-text" aria-live="polite"></div>
+
+                            <!-- Password Requirements Checklist -->
+                            <ul class="password-requirements" id="password-requirements" aria-label="Password requirements">
+                                <li id="req-length">
+                                    <i class="bi bi-circle" aria-hidden="true"></i>
+                                    At least 8 characters long
+                                </li>
+                                <li id="req-not-numeric">
+                                    <i class="bi bi-circle" aria-hidden="true"></i>
+                                    Not entirely numeric
+                                </li>
+                                <li id="req-has-letter">
+                                    <i class="bi bi-circle" aria-hidden="true"></i>
+                                    Contains at least one letter
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- Confirm Password -->
+                        <div class="form-group">
+                            <label for="id_password2" class="form-label">
+                                Confirm Password <span class="text-danger" aria-hidden="true">*</span>
+                                <span class="visually-hidden">(required)</span>
+                            </label>
+                            <input type="password"
+                                   name="password2"
+                                   id="id_password2"
+                                   class="form-control {% if form.password2.errors %}is-invalid{% endif %}"
+                                   placeholder="Re-type your password"
+                                   autocomplete="new-password"
+                                   minlength="8"
+                                   aria-describedby="password2-help password2-feedback"
+                                   required>
+                            {% if form.password2.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {% for error in form.password2.errors %}
+                                        <div><i class="bi bi-exclamation-circle me-1" aria-hidden="true"></i>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <div class="invalid-feedback" id="password2-feedback" role="alert"></div>
+                            <small class="form-text d-block text-muted" id="password2-help">
+                                Type the same password again to confirm
+                            </small>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-primary w-100 mb-3">
+                            <i class="bi bi-person-plus" aria-hidden="true"></i> Create Patient Account
+                        </button>
+
+                        <!-- Login Link -->
+                        <div class="text-center">
+                            <p class="text-muted">Already have an account?
+                                <a href="{% url 'login' %}">Login here</a>
+                            </p>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -302,386 +270,16 @@
 {% endblock %}
 
 {% block extra_js %}
+{# Reusable form validation script from foundation components #}
+<script src="{% static 'js/form-validation.js' %}"></script>
 <script>
+    /**
+     * Initialize registration form validation using reusable FormValidator class.
+     * This replaces the inline validation script with the foundation component.
+     */
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('registrationForm');
-        const usernameField = document.getElementById('{{ form.username.id_for_label }}');
-        const firstNameField = document.getElementById('{{ form.first_name.id_for_label }}');
-        const lastNameField = document.getElementById('{{ form.last_name.id_for_label }}');
-        const emailField = document.getElementById('{{ form.email.id_for_label }}');
-        const password1Field = document.getElementById('{{ form.password1.id_for_label }}');
-        const password2Field = document.getElementById('{{ form.password2.id_for_label }}');
-
-        // Track which fields have been touched (interacted with)
-        const touchedFields = new Set();
-
-        // Clear all validation styling on page load to prevent showing errors before user interaction
-        function clearInitialValidation() {
-            const allFields = [usernameField, firstNameField, lastNameField, emailField, password1Field, password2Field];
-            const allFieldNames = ['username', 'first_name', 'last_name', 'email', 'password1', 'password2'];
-
-            allFields.forEach((field, index) => {
-                if (field) {
-                    field.classList.remove('is-invalid', 'is-valid');
-                    const validIcon = document.getElementById(allFieldNames[index] + '-valid');
-                    const invalidIcon = document.getElementById(allFieldNames[index] + '-invalid');
-                    const errorDiv = document.getElementById(allFieldNames[index] + '-error');
-
-                    if (validIcon) validIcon.style.display = 'none';
-                    if (invalidIcon) invalidIcon.style.display = 'none';
-                    if (errorDiv) errorDiv.textContent = '';
-                }
-            });
-        }
-
-        // Clear validation styling on initial load
-        clearInitialValidation();
-
-        // Validation functions
-        function validateUsername(forceValidation = false) {
-            const value = usernameField.value.trim();
-            const validIcon = document.getElementById('username-valid');
-            const invalidIcon = document.getElementById('username-invalid');
-            const errorDiv = document.getElementById('username-error');
-
-            // Only show validation if field has been touched or validation is forced
-            if (!touchedFields.has('username') && !forceValidation) {
-                return value.length >= 3 && value.length <= 150;
-            }
-
-            if (value.length < 3) {
-                usernameField.classList.add('is-invalid');
-                usernameField.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Username must be at least 3 characters long.';
-                return false;
-            } else if (value.length > 150) {
-                usernameField.classList.add('is-invalid');
-                usernameField.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Username must be at most 150 characters long.';
-                return false;
-            } else {
-                usernameField.classList.remove('is-invalid');
-                usernameField.classList.add('is-valid');
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return true;
-            }
-        }
-
-        function validateName(field, fieldName, forceValidation = false) {
-            const value = field.value.trim();
-            const validIcon = document.getElementById(fieldName + '-valid');
-            const invalidIcon = document.getElementById(fieldName + '-invalid');
-            const errorDiv = document.getElementById(fieldName + '-error');
-
-            // Only show validation if field has been touched or validation is forced
-            if (!touchedFields.has(fieldName) && !forceValidation) {
-                return value.length >= 2;
-            }
-
-            if (value.length === 0) {
-                field.classList.add('is-invalid');
-                field.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'This field is required.';
-                return false;
-            } else if (value.length < 2) {
-                field.classList.add('is-invalid');
-                field.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Name must be at least 2 characters long.';
-                return false;
-            } else {
-                field.classList.remove('is-invalid');
-                field.classList.add('is-valid');
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return true;
-            }
-        }
-
-        function validateEmail(forceValidation = false) {
-            const value = emailField.value.trim();
-            const validIcon = document.getElementById('email-valid');
-            const invalidIcon = document.getElementById('email-invalid');
-            const errorDiv = document.getElementById('email-error');
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-            // Only show validation if field has been touched or validation is forced
-            if (!touchedFields.has('email') && !forceValidation) {
-                return emailRegex.test(value);
-            }
-
-            if (!emailRegex.test(value)) {
-                emailField.classList.add('is-invalid');
-                emailField.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Please enter a valid email address.';
-                return false;
-            } else {
-                emailField.classList.remove('is-invalid');
-                emailField.classList.add('is-valid');
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return true;
-            }
-        }
-
-        function checkPasswordStrength(password) {
-            let strength = 0;
-            const checks = {
-                length: password.length >= 8,
-                lowercase: /[a-z]/.test(password),
-                uppercase: /[A-Z]/.test(password),
-                numbers: /[0-9]/.test(password),
-                special: /[^a-zA-Z0-9]/.test(password)
-            };
-
-            // Count met criteria
-            for (let check in checks) {
-                if (checks[check]) strength++;
-            }
-
-            // Update requirements checklist
-            const reqLength = document.getElementById('req-length');
-            const reqNotNumeric = document.getElementById('req-not-numeric');
-            const reqHasLetter = document.getElementById('req-has-letter');
-
-            // Length requirement
-            if (checks.length) {
-                reqLength.classList.add('valid');
-                reqLength.classList.remove('invalid');
-                reqLength.querySelector('i').className = 'bi bi-check-circle-fill';
-            } else {
-                reqLength.classList.remove('valid');
-                reqLength.classList.add('invalid');
-                reqLength.querySelector('i').className = 'bi bi-x-circle-fill';
-            }
-
-            // Not entirely numeric
-            if (password.length > 0 && !(/^\d+$/.test(password))) {
-                reqNotNumeric.classList.add('valid');
-                reqNotNumeric.classList.remove('invalid');
-                reqNotNumeric.querySelector('i').className = 'bi bi-check-circle-fill';
-            } else {
-                reqNotNumeric.classList.remove('valid');
-                reqNotNumeric.classList.add('invalid');
-                reqNotNumeric.querySelector('i').className = 'bi bi-x-circle-fill';
-            }
-
-            // Contains letter
-            if (checks.lowercase || checks.uppercase) {
-                reqHasLetter.classList.add('valid');
-                reqHasLetter.classList.remove('invalid');
-                reqHasLetter.querySelector('i').className = 'bi bi-check-circle-fill';
-            } else {
-                reqHasLetter.classList.remove('valid');
-                reqHasLetter.classList.add('invalid');
-                reqHasLetter.querySelector('i').className = 'bi bi-x-circle-fill';
-            }
-
-            return strength;
-        }
-
-        function validatePassword1(forceValidation = false) {
-            const password = password1Field.value;
-            const validIcon = document.getElementById('password1-valid');
-            const invalidIcon = document.getElementById('password1-invalid');
-            const errorDiv = document.getElementById('password1-error');
-            const strengthBar = document.getElementById('password-strength-bar');
-            const strengthText = document.getElementById('password-strength-text');
-
-            // Always show password strength for better UX, but only show validation errors if touched
-            const showErrors = touchedFields.has('password1') || forceValidation;
-
-            if (password.length === 0) {
-                password1Field.classList.remove('is-invalid', 'is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'none';
-                strengthBar.className = 'password-strength-bar';
-                strengthText.textContent = '';
-                errorDiv.textContent = '';
-                return false;
-            }
-
-            const strength = checkPasswordStrength(password);
-
-            // Update strength meter (always show this for immediate feedback)
-            strengthBar.className = 'password-strength-bar';
-            strengthText.className = 'password-strength-text';
-
-            if (strength <= 2) {
-                strengthBar.classList.add('weak');
-                strengthText.classList.add('weak');
-                strengthText.textContent = 'Weak password';
-            } else if (strength <= 3) {
-                strengthBar.classList.add('medium');
-                strengthText.classList.add('medium');
-                strengthText.textContent = 'Medium password';
-            } else {
-                strengthBar.classList.add('strong');
-                strengthText.classList.add('strong');
-                strengthText.textContent = 'Strong password';
-            }
-
-            // Validate basic requirements
-            const isValid = password.length >= 8 && !/^\d+$/.test(password);
-
-            if (!showErrors) {
-                // Don't show error styling yet, just return validation state
-                return isValid;
-            }
-
-            if (password.length < 8) {
-                password1Field.classList.add('is-invalid');
-                password1Field.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Password must be at least 8 characters long.';
-                return false;
-            } else if (/^\d+$/.test(password)) {
-                password1Field.classList.add('is-invalid');
-                password1Field.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Password cannot be entirely numeric.';
-                return false;
-            } else {
-                password1Field.classList.remove('is-invalid');
-                password1Field.classList.add('is-valid');
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return true;
-            }
-        }
-
-        function validatePassword2(forceValidation = false) {
-            const password1 = password1Field.value;
-            const password2 = password2Field.value;
-            const validIcon = document.getElementById('password2-valid');
-            const invalidIcon = document.getElementById('password2-invalid');
-            const errorDiv = document.getElementById('password2-error');
-
-            // Only show validation if field has been touched or validation is forced
-            if (!touchedFields.has('password2') && !forceValidation) {
-                return password1 === password2 && password2.length > 0;
-            }
-
-            if (password2.length === 0) {
-                password2Field.classList.remove('is-invalid', 'is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return false;
-            }
-
-            if (password1 !== password2) {
-                password2Field.classList.add('is-invalid');
-                password2Field.classList.remove('is-valid');
-                validIcon.style.display = 'none';
-                invalidIcon.style.display = 'block';
-                errorDiv.textContent = 'Passwords do not match.';
-                return false;
-            } else {
-                password2Field.classList.remove('is-invalid');
-                password2Field.classList.add('is-valid');
-                validIcon.style.display = 'block';
-                invalidIcon.style.display = 'none';
-                errorDiv.textContent = '';
-                return true;
-            }
-        }
-
-        // Add event listeners
-        usernameField.addEventListener('blur', () => {
-            touchedFields.add('username');
-            validateUsername();
-        });
-        usernameField.addEventListener('input', validateUsername);
-
-        firstNameField.addEventListener('blur', () => {
-            touchedFields.add('first_name');
-            validateName(firstNameField, 'first_name');
-        });
-        firstNameField.addEventListener('input', () => validateName(firstNameField, 'first_name'));
-
-        lastNameField.addEventListener('blur', () => {
-            touchedFields.add('last_name');
-            validateName(lastNameField, 'last_name');
-        });
-        lastNameField.addEventListener('input', () => validateName(lastNameField, 'last_name'));
-
-        emailField.addEventListener('blur', () => {
-            touchedFields.add('email');
-            validateEmail();
-        });
-        emailField.addEventListener('input', validateEmail);
-
-        password1Field.addEventListener('blur', () => {
-            touchedFields.add('password1');
-            validatePassword1();
-        });
-        password1Field.addEventListener('input', () => {
-            validatePassword1();
-            if (password2Field.value.length > 0) {
-                validatePassword2();
-            }
-        });
-
-        password2Field.addEventListener('blur', () => {
-            touchedFields.add('password2');
-            validatePassword2();
-        });
-        password2Field.addEventListener('input', validatePassword2);
-
-        // Form submission validation
-        form.addEventListener('submit', function(e) {
-            // Force validation on all fields during submission
-            const isUsernameValid = validateUsername(true);
-            const isFirstNameValid = validateName(firstNameField, 'first_name', true);
-            const isLastNameValid = validateName(lastNameField, 'last_name', true);
-            const isEmailValid = validateEmail(true);
-            const isPassword1Valid = validatePassword1(true);
-            const isPassword2Valid = validatePassword2(true);
-
-            if (!isUsernameValid || !isFirstNameValid || !isLastNameValid ||
-                !isEmailValid || !isPassword1Valid || !isPassword2Valid) {
-                e.preventDefault();
-
-                // Scroll to first error
-                const firstInvalid = document.querySelector('.is-invalid');
-                if (firstInvalid) {
-                    firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    firstInvalid.focus();
-                }
-
-                // Show general error message
-                const errorAlert = document.createElement('div');
-                errorAlert.className = 'alert alert-danger alert-dismissible fade show';
-                errorAlert.innerHTML = `
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Please fix the errors above before submitting.</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                `;
-                form.insertBefore(errorAlert, form.firstChild);
-
-                // Remove alert after 5 seconds
-                setTimeout(() => {
-                    errorAlert.remove();
-                }, 5000);
-            }
-        });
+        // Initialize the form validator with registration-specific configuration
+        initRegistrationFormValidation();
     });
 </script>
 {% endblock %}

@@ -67,10 +67,10 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 
 # Session settings
-# Default session expiry is browser close (0), can be overridden by "remember me"
-SESSION_COOKIE_AGE = 1209600  # 2 weeks (14 days) - default max age
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Will be set dynamically by login view
-SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request
+# Default session expiry is browser close, can be overridden by "remember me"
+SESSION_COOKIE_AGE = 1209600  # 2 weeks (14 days) - max age when "remember me" is checked
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Default: expire on browser close (overridden by login view)
+SESSION_SAVE_EVERY_REQUEST = False  # Don't refresh on every request (allows remember me to work correctly)
 
 TEMPLATES = [
     {
@@ -84,6 +84,7 @@ TEMPLATES = [
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
                 "django.template.context_processors.media",  # For media files
+                "detection.decorators.profile_completion_context",  # Profile completion status
             ],
         },
     },
@@ -136,6 +137,33 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "Asia/Kuala_Lumpur"  # Malaysian timezone
 USE_I18N = True
 USE_TZ = True
+
+# Malaysia Date/Time Formats (Override Django defaults)
+# These formats are used by Django's template filters and form widgets
+DATE_FORMAT = "d M Y"  # e.g., "22 Nov 2025"
+DATETIME_FORMAT = "d M Y, g:i A"  # e.g., "22 Nov 2025, 2:30 PM"
+SHORT_DATE_FORMAT = "d/m/Y"  # e.g., "22/11/2025"
+SHORT_DATETIME_FORMAT = "d/m/Y g:i A"  # e.g., "22/11/2025 2:30 PM"
+TIME_FORMAT = "g:i A"  # e.g., "2:30 PM"
+
+# Date input formats for forms (accepts multiple formats)
+DATE_INPUT_FORMATS = [
+    "%Y-%m-%d",  # ISO format (HTML5 date input): 2025-11-22
+    "%d/%m/%Y",  # Malaysian format: 22/11/2025
+    "%d-%m-%Y",  # Alternative: 22-11-2025
+    "%d %b %Y",  # Display format: 22 Nov 2025
+]
+
+DATETIME_INPUT_FORMATS = [
+    "%Y-%m-%dT%H:%M",  # HTML5 datetime-local: 2025-11-22T14:30
+    "%Y-%m-%d %H:%M:%S",  # ISO format: 2025-11-22 14:30:00
+    "%Y-%m-%d %H:%M",  # ISO without seconds: 2025-11-22 14:30
+    "%d/%m/%Y %H:%M:%S",  # Malaysian: 22/11/2025 14:30:00
+    "%d/%m/%Y %H:%M",  # Malaysian without seconds: 22/11/2025 14:30
+]
+
+# Disable localization to ensure consistent format across all users
+USE_L10N = False
 
 
 # Static files (CSS, JavaScript, Images)

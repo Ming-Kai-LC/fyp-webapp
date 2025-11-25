@@ -2,12 +2,16 @@ from django.db import models
 from django.conf import settings
 from detection.models import Patient
 from django.core.validators import FileExtensionValidator
+from common.models import TimeStampedModel
 import uuid
 
 
-class MedicalCondition(models.Model):
+class MedicalCondition(TimeStampedModel):
     """
     Track patient's medical conditions and diagnoses
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     SEVERITY_CHOICES = (
         ('mild', 'Mild'),
@@ -42,7 +46,7 @@ class MedicalCondition(models.Model):
         help_text="Whether this condition increases COVID-19 risk"
     )
 
-    # Metadata
+    # Metadata (diagnosed_by is specialized, not same as created_by)
     diagnosed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -51,8 +55,7 @@ class MedicalCondition(models.Model):
         related_name='diagnosed_conditions'
     )
     notes = models.TextField(blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['-diagnosed_date']
@@ -61,9 +64,12 @@ class MedicalCondition(models.Model):
         return f"{self.patient.user.get_full_name()} - {self.condition_name}"
 
 
-class Allergy(models.Model):
+class Allergy(TimeStampedModel):
     """
     Track patient allergies for safety
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     SEVERITY_CHOICES = (
         ('mild', 'Mild'),
@@ -91,15 +97,14 @@ class Allergy(models.Model):
     is_active = models.BooleanField(default=True)
     verified_by_doctor = models.BooleanField(default=False)
 
-    # Metadata
+    # Metadata (recorded_by is specialized)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['-severity', 'allergen']
@@ -109,9 +114,12 @@ class Allergy(models.Model):
         return f"{self.patient.user.get_full_name()} - {self.allergen} ({self.severity})"
 
 
-class Medication(models.Model):
+class Medication(TimeStampedModel):
     """
     Track current and past medications
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     STATUS_CHOICES = (
         ('current', 'Currently Taking'),
@@ -140,15 +148,14 @@ class Medication(models.Model):
     side_effects = models.TextField(blank=True)
     notes = models.TextField(blank=True)
 
-    # Metadata
+    # Metadata (recorded_by is specialized)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['-start_date']
@@ -157,9 +164,12 @@ class Medication(models.Model):
         return f"{self.medication_name} - {self.dosage}"
 
 
-class Vaccination(models.Model):
+class Vaccination(TimeStampedModel):
     """
     Track vaccination records, especially COVID-19 vaccines
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     VACCINE_TYPES = (
         ('covid19_pfizer', 'COVID-19 Pfizer-BioNTech'),
@@ -196,7 +206,7 @@ class Vaccination(models.Model):
         validators=[FileExtensionValidator(['pdf', 'jpg', 'jpeg', 'png'])]
     )
 
-    # Metadata
+    # Metadata (recorded_by is specialized)
     notes = models.TextField(blank=True)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -204,8 +214,7 @@ class Vaccination(models.Model):
         null=True,
         blank=True
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['-administered_date']
@@ -214,9 +223,12 @@ class Vaccination(models.Model):
         return f"{self.patient.user.get_full_name()} - {self.get_vaccine_name_display()} Dose {self.dose_number}"
 
 
-class Surgery(models.Model):
+class Surgery(TimeStampedModel):
     """
     Track surgical history
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='surgeries')
     surgery_name = models.CharField(max_length=200)
@@ -232,7 +244,7 @@ class Surgery(models.Model):
     complications = models.TextField(blank=True)
     outcome = models.TextField(blank=True)
 
-    # Metadata
+    # Metadata (recorded_by is specialized)
     notes = models.TextField(blank=True)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -240,8 +252,7 @@ class Surgery(models.Model):
         null=True,
         blank=True
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['-surgery_date']
@@ -251,9 +262,12 @@ class Surgery(models.Model):
         return f"{self.surgery_name} - {self.surgery_date}"
 
 
-class FamilyHistory(models.Model):
+class FamilyHistory(TimeStampedModel):
     """
     Track family medical history for risk assessment
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     RELATIONSHIP_CHOICES = (
         ('mother', 'Mother'),
@@ -274,15 +288,14 @@ class FamilyHistory(models.Model):
     # Details
     notes = models.TextField(blank=True)
 
-    # Metadata
+    # Metadata (recorded_by is specialized)
     recorded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         verbose_name_plural = "Family Histories"
@@ -291,9 +304,12 @@ class FamilyHistory(models.Model):
         return f"{self.patient.user.get_full_name()} - {self.relationship}: {self.condition}"
 
 
-class MedicalDocument(models.Model):
+class MedicalDocument(TimeStampedModel):
     """
     Store medical documents (lab results, prescriptions, etc.)
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (upload time), updated_at
     """
     DOCUMENT_TYPES = (
         ('lab_result', 'Lab Result'),
@@ -327,7 +343,7 @@ class MedicalDocument(models.Model):
         null=True,
         related_name='uploaded_documents'
     )
-    uploaded_at = models.DateTimeField(auto_now_add=True)
+    # Note: uploaded_at is now created_at (inherited from TimeStampedModel)
 
     # OCR extracted text (for searchability)
     extracted_text = models.TextField(blank=True)
@@ -360,9 +376,12 @@ class MedicalDocument(models.Model):
         super().save(*args, **kwargs)
 
 
-class LifestyleInformation(models.Model):
+class LifestyleInformation(TimeStampedModel):
     """
     Track lifestyle factors relevant to COVID-19 risk
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     SMOKING_STATUS = (
         ('never', 'Never Smoked'),
@@ -407,22 +426,25 @@ class LifestyleInformation(models.Model):
         help_text="High risk of COVID-19 exposure at work"
     )
 
-    # Metadata
-    last_updated = models.DateTimeField(auto_now=True)
+    # Metadata (updated_by is specialized tracking)
     updated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
+    # Note: last_updated is now updated_at (inherited from TimeStampedModel)
 
     def __str__(self):
         return f"{self.patient.user.get_full_name()} - Lifestyle Information"
 
 
-class COVIDRiskScore(models.Model):
+class COVIDRiskScore(TimeStampedModel):
     """
     Calculate and store COVID-19 risk scores based on patient history
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (calculation time), updated_at
     """
     RISK_LEVELS = (
         ('low', 'Low Risk'),
@@ -432,7 +454,7 @@ class COVIDRiskScore(models.Model):
     )
 
     patient = models.ForeignKey(Patient, on_delete=models.CASCADE, related_name='risk_scores')
-    calculated_at = models.DateTimeField(auto_now_add=True)
+    # Note: calculated_at is now created_at (inherited from TimeStampedModel)
     calculated_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -457,7 +479,7 @@ class COVIDRiskScore(models.Model):
     recommendations = models.TextField()
 
     class Meta:
-        ordering = ['-calculated_at']
+        ordering = ['-created_at']
 
     def __str__(self):
         return f"{self.patient.user.get_full_name()} - {self.get_risk_level_display()} ({self.total_score})"

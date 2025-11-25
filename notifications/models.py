@@ -1,12 +1,16 @@
 from django.db import models
 from django.conf import settings
 from detection.models import Patient, Prediction
+from common.models import TimeStampedModel
 import uuid
 
 
-class NotificationTemplate(models.Model):
+class NotificationTemplate(TimeStampedModel):
     """
     Email/SMS templates for different notification types
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     TEMPLATE_TYPES = (
         ('prediction_ready', 'Prediction Ready'),
@@ -39,16 +43,18 @@ class NotificationTemplate(models.Model):
         help_text="Critical notifications bypass user preferences"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     def __str__(self):
         return f"{self.get_template_type_display()} - {self.get_channel_display()}"
 
 
-class Notification(models.Model):
+class Notification(TimeStampedModel):
     """
     Individual notification instances
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     STATUS_CHOICES = (
         ('pending', 'Pending'),
@@ -89,7 +95,7 @@ class Notification(models.Model):
     # Delivery
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='normal')
-    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # created_at inherited from TimeStampedModel
     sent_at = models.DateTimeField(null=True, blank=True)
     read_at = models.DateTimeField(null=True, blank=True)
 
@@ -125,9 +131,12 @@ class Notification(models.Model):
         self.save(update_fields=['status', 'read_at'])
 
 
-class NotificationPreference(models.Model):
+class NotificationPreference(TimeStampedModel):
     """
     User notification preferences
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -163,23 +172,25 @@ class NotificationPreference(models.Model):
         help_text="Receive daily summary instead of individual notifications"
     )
 
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     def __str__(self):
         return f"{self.user.username} - Notification Preferences"
 
 
-class NotificationLog(models.Model):
+class NotificationLog(TimeStampedModel):
     """
     Log all notification attempts for debugging
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (attempt time), updated_at
     """
     notification = models.ForeignKey(
         Notification,
         on_delete=models.CASCADE,
         related_name='delivery_logs'
     )
-    attempted_at = models.DateTimeField(auto_now_add=True)
+    # Note: attempted_at is now created_at (inherited from TimeStampedModel)
     success = models.BooleanField()
     channel = models.CharField(max_length=20)
     error_details = models.TextField(blank=True)
@@ -189,7 +200,7 @@ class NotificationLog(models.Model):
     provider_response = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-attempted_at']
+        ordering = ['-created_at']
 
     def __str__(self):
         status = "Success" if self.success else "Failed"

@@ -1,0 +1,58 @@
+{% comment %}
+Profile Completion Banner Component
+Shows a dismissible alert when user's profile is incomplete
+
+Usage:
+    {% include 'components/profile_completion_banner.html' %}
+
+Context variables (auto-provided by context processor):
+    - profile_is_complete: Boolean
+    - profile_missing_fields: List of field names
+    - profile_completion_percentage: Integer (0-100)
+
+Follows:
+    - UI Design System (Bootstrap 5, responsive, accessible)
+    - Foundation Components (reusable component pattern)
+{% endcomment %}
+
+{% if user.is_authenticated and not profile_is_complete %}
+{# Alert component following Bootstrap 5 patterns from UI Design System #}
+<div class="alert alert-warning alert-dismissible fade show profile-banner mb-0"
+     role="alert"
+     aria-live="polite">
+    <div class="container-fluid px-3 px-md-4">
+        <div class="d-flex align-items-center flex-wrap gap-3">
+            {# Icon - decorative, hidden from screen readers #}
+            <i class="bi bi-exclamation-triangle-fill fs-3" aria-hidden="true"></i>
+
+            {# Message content - flex-grow for responsive layout #}
+            <div class="flex-grow-1">
+                <h6 class="alert-heading mb-1 fw-bold">
+                    Complete Your Profile ({{ profile_completion_percentage }}% Complete)
+                </h6>
+                <p class="mb-0 small">
+                    {% if profile_missing_fields %}
+                        Missing required information: <strong>{{ profile_missing_fields|join:", " }}</strong>.
+                    {% endif %}
+                    Please complete your profile to access all features.
+                </p>
+            </div>
+
+            {# Action button - flex-shrink-0 to prevent shrinking #}
+            <a href="{% url 'detection:user_profile' %}"
+               class="btn btn-warning flex-shrink-0"
+               aria-label="Complete your profile">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span class="d-none d-sm-inline">Complete Profile</span>
+                <span class="d-sm-none">Complete</span>
+            </a>
+        </div>
+    </div>
+
+    {# Dismiss button with proper accessibility #}
+    <button type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+            aria-label="Dismiss profile completion reminder"></button>
+</div>
+{% endif %}

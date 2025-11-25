@@ -1,0 +1,994 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load common_tags %}
+
+{% block title %}My Profile - COVID-19 Detection{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, var(--bs-primary, #667eea) 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+    }
+
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid white;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .role-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        display: inline-block;
+        margin-top: 0.5rem;
+    }
+
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 3px solid transparent;
+        padding: 1rem 1.5rem;
+    }
+
+    .nav-tabs .nav-link.active {
+        color: var(--bs-primary, #667eea);
+        border-bottom-color: var(--bs-primary, #667eea);
+        background: transparent;
+    }
+
+    .nav-tabs .nav-link:hover {
+        border-bottom-color: var(--bs-primary, #667eea);
+    }
+
+    .nav-tabs .nav-link:focus {
+        outline: 2px solid var(--bs-primary, #667eea);
+        outline-offset: 2px;
+    }
+
+    .form-section {
+        background: white;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        margin-bottom: 1.5rem;
+    }
+
+    .form-section-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: #2d3748;
+        border-left: 4px solid var(--bs-primary, #667eea);
+        padding-left: 1rem;
+    }
+
+    .read-only-field {
+        background-color: #f8f9fa;
+        border: 1px solid #e9ecef;
+        padding: 0.5rem 1rem;
+        border-radius: 0.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .read-only-field i {
+        color: #6c757d;
+    }
+
+    .stat-card {
+        background: linear-gradient(135deg, var(--bs-primary, #667eea) 0%, #764ba2 100%);
+        color: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    .stat-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .profile-picture-preview {
+        max-width: 200px;
+        border-radius: 10px;
+        margin-top: 1rem;
+    }
+
+    .btn-save {
+        background: linear-gradient(135deg, var(--bs-primary, #667eea) 0%, #764ba2 100%);
+        border: none;
+        padding: 0.75rem 2rem;
+        color: white;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .btn-save:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .btn-save:focus {
+        outline: 2px solid var(--bs-primary, #667eea);
+        outline-offset: 2px;
+        color: white;
+    }
+
+    /* Client-side validation styles */
+    .form-control.is-valid,
+    .form-select.is-valid {
+        border-color: var(--bs-success);
+    }
+
+    .form-control.is-invalid,
+    .form-select.is-invalid {
+        border-color: var(--bs-danger);
+    }
+
+    .validation-feedback {
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+
+    .validation-feedback.valid {
+        color: var(--bs-success);
+    }
+
+    .validation-feedback.invalid {
+        color: var(--bs-danger);
+    }
+
+    .file-size-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
+    }
+
+    .file-size-info.warning {
+        color: var(--bs-warning);
+    }
+
+    .file-size-info.error {
+        color: var(--bs-danger);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Profile Header -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-auto">
+                {% if profile.profile_picture %}
+                    <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="profile-avatar">
+                {% else %}
+                    <div class="profile-avatar bg-white d-flex align-items-center justify-content-center">
+                        <i class="bi bi-person-circle" style="font-size: 6rem; color: #667eea;"></i>
+                    </div>
+                {% endif %}
+            </div>
+            <div class="col">
+                <h2 class="mb-2">
+                    {{ user.get_full_name|default:user.username }}
+                    {% if user.is_superuser %}
+                        <i class="bi bi-patch-check-fill text-warning" title="Superuser"></i>
+                    {% endif %}
+                </h2>
+                <p class="mb-2"><i class="bi bi-envelope"></i> {{ user.email }}</p>
+                <p class="mb-0"><i class="bi bi-at"></i> {{ user.username }}</p>
+
+                {% if is_admin %}
+                    <span class="role-badge bg-danger">
+                        <i class="bi bi-shield-fill-check"></i> Administrator
+                    </span>
+                {% elif is_staff %}
+                    <span class="role-badge bg-success">
+                        <i class="bi bi-hospital"></i> Medical Staff
+                    </span>
+                {% elif is_patient %}
+                    <span class="role-badge bg-primary">
+                        <i class="bi bi-person"></i> Patient
+                    </span>
+                {% endif %}
+            </div>
+            {% if is_patient %}
+                <div class="col-auto d-none d-md-flex gap-3">
+                    <div class="stat-card">
+                        <div class="stat-number">{{ total_xrays|default:0 }}</div>
+                        <div class="stat-label">Total X-Rays</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">{{ covid_positive_count|default:0 }}</div>
+                        <div class="stat-label">COVID+ Results</div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mobile Stats for Patients -->
+    {% if is_patient %}
+    <div class="row d-md-none mb-3">
+        <div class="col-6">
+            <div class="stat-card">
+                <div class="stat-number">{{ total_xrays|default:0 }}</div>
+                <div class="stat-label">Total X-Rays</div>
+            </div>
+        </div>
+        <div class="col-6">
+            <div class="stat-card">
+                <div class="stat-number">{{ covid_positive_count|default:0 }}</div>
+                <div class="stat-label">COVID+ Results</div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Display Messages -->
+    {% if messages %}
+        {% for message in messages %}
+            {% include 'components/alert.html' with message=message.message type=message.tags dismissible=True %}
+        {% endfor %}
+    {% endif %}
+
+    <!-- Tabbed Interface -->
+    <ul class="nav nav-tabs" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="personal-tab" data-bs-toggle="tab" data-bs-target="#personal" type="button" role="tab">
+                <i class="bi bi-person-circle"></i> Personal Information
+            </button>
+        </li>
+        {% if is_patient %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="medical-tab" data-bs-toggle="tab" data-bs-target="#medical" type="button" role="tab">
+                <i class="bi bi-heart-pulse"></i> Medical Information
+            </button>
+        </li>
+        {% endif %}
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="picture-tab" data-bs-toggle="tab" data-bs-target="#picture" type="button" role="tab">
+                <i class="bi bi-camera"></i> Profile Picture
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
+                <i class="bi bi-shield-lock"></i> Security
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="profileTabsContent">
+        <!-- Personal Information Tab -->
+        <div class="tab-pane fade show active" id="personal" role="tabpanel">
+            <div class="form-section mt-4">
+                <h3 class="form-section-title">Personal Information</h3>
+                <form method="post" id="basic-info-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="basic_info">
+
+                    <div class="row">
+                        <!-- Username (Read-Only) -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-at"></i> Username
+                            </label>
+                            <div class="read-only-field">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>{{ user.username }}</span>
+                                <small class="text-muted ms-auto">(Cannot be changed)</small>
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ basic_form.email.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-envelope"></i> Email Address <span class="text-danger">*</span>
+                            </label>
+                            {{ basic_form.email }}
+                            {% if basic_form.email.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {{ basic_form.email.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small id="email-help" class="form-text text-muted">{{ basic_form.email.help_text }}</small>
+                            <div id="email-validation-feedback" class="validation-feedback" aria-live="polite"></div>
+                        </div>
+
+                        <!-- First Name -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ basic_form.first_name.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-person"></i> First Name <span class="text-danger">*</span>
+                            </label>
+                            {{ basic_form.first_name }}
+                            {% if basic_form.first_name.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {{ basic_form.first_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small id="first-name-help" class="form-text text-muted">At least 2 characters</small>
+                            <div id="first-name-validation-feedback" class="validation-feedback" aria-live="polite"></div>
+                        </div>
+
+                        <!-- Last Name -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ basic_form.last_name.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-person"></i> Last Name <span class="text-danger">*</span>
+                            </label>
+                            {{ basic_form.last_name }}
+                            {% if basic_form.last_name.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {{ basic_form.last_name.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small id="last-name-help" class="form-text text-muted">At least 2 characters</small>
+                            <div id="last-name-validation-feedback" class="validation-feedback" aria-live="polite"></div>
+                        </div>
+
+                        <!-- Phone -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ basic_form.phone.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-telephone"></i> Phone Number
+                            </label>
+                            {{ basic_form.phone }}
+                            {% if basic_form.phone.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {{ basic_form.phone.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small id="phone-help" class="form-text text-muted">{{ basic_form.phone.help_text }}</small>
+                            <div id="phone-validation-feedback" class="validation-feedback" aria-live="polite"></div>
+                        </div>
+
+                        <!-- Role (Read-Only) -->
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-shield"></i> Role
+                            </label>
+                            <div class="read-only-field">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>{{ profile.get_role_display }}</span>
+                                <small class="text-muted ms-auto">(Contact admin to change)</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-save">
+                            <i class="bi bi-check-circle"></i> Save Changes
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Medical Information Tab (Patients Only) -->
+        {% if is_patient %}
+        <div class="tab-pane fade" id="medical" role="tabpanel">
+            <div class="form-section mt-4">
+                <h3 class="form-section-title">Medical Information</h3>
+                <form method="post" id="patient-info-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="patient_info">
+
+                    <div class="row">
+                        <!-- Age (Read-Only - Auto-calculated) -->
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-bold">
+                                <i class="bi bi-123"></i> Age
+                            </label>
+                            <div class="read-only-field">
+                                <i class="bi bi-lock-fill"></i>
+                                <span>{{ patient_form.age.value|default:"Not set" }} years</span>
+                                <small class="text-muted ms-auto">(Auto-calculated from DOB)</small>
+                            </div>
+                        </div>
+
+                        <!-- Gender -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ patient_form.gender.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-gender-ambiguous"></i> Gender *
+                            </label>
+                            {{ patient_form.gender }}
+                            {% if patient_form.gender.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.gender.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Date of Birth -->
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ patient_form.date_of_birth.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-calendar"></i> Date of Birth
+                            </label>
+                            {{ patient_form.date_of_birth }}
+                            {% if patient_form.date_of_birth.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.date_of_birth.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Emergency Contact -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ patient_form.emergency_contact.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-telephone-forward"></i> Emergency Contact
+                            </label>
+                            {{ patient_form.emergency_contact }}
+                            {% if patient_form.emergency_contact.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.emergency_contact.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Address -->
+                        <div class="col-12 mb-3">
+                            <label for="{{ patient_form.address.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-geo-alt"></i> Address
+                            </label>
+                            {{ patient_form.address }}
+                            {% if patient_form.address.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.address.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Medical History -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ patient_form.medical_history.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-file-medical"></i> Medical History
+                            </label>
+                            {{ patient_form.medical_history }}
+                            {% if patient_form.medical_history.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.medical_history.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Current Medications -->
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ patient_form.current_medications.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-capsule"></i> Current Medications
+                            </label>
+                            {{ patient_form.current_medications }}
+                            {% if patient_form.current_medications.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ patient_form.current_medications.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-save">
+                            <i class="bi bi-check-circle"></i> Save Medical Information
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Profile Picture Tab -->
+        <div class="tab-pane fade" id="picture" role="tabpanel">
+            <div class="form-section mt-4">
+                <h3 class="form-section-title">Profile Picture</h3>
+                <form method="post" enctype="multipart/form-data" id="picture-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="profile_picture">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label for="{{ picture_form.profile_picture.id_for_label }}" class="form-label fw-bold">
+                                <i class="bi bi-camera"></i> Upload New Picture
+                            </label>
+                            {{ picture_form.profile_picture }}
+                            {% if picture_form.profile_picture.errors %}
+                                <div class="invalid-feedback d-block" role="alert">
+                                    {{ picture_form.profile_picture.errors.0 }}
+                                </div>
+                            {% endif %}
+                            <small id="profile-picture-help" class="form-text text-muted d-block mt-2">
+                                {{ picture_form.profile_picture.help_text }}
+                            </small>
+                            <div id="file-size-info" class="file-size-info" aria-live="polite"></div>
+                            <div id="picture-preview-container" class="mt-2" style="display: none;">
+                                <p class="mb-1"><strong>Preview:</strong></p>
+                                <img id="picture-preview" src="" alt="Preview" class="profile-picture-preview">
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Current Picture</label>
+                            {% if profile.profile_picture %}
+                                <img src="{{ profile.profile_picture.url }}" alt="Current Profile Picture" class="profile-picture-preview d-block">
+                            {% else %}
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> No profile picture uploaded yet.
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="text-end mt-3">
+                        <button type="submit" class="btn btn-save" id="upload-picture-btn">
+                            <i class="bi bi-upload"></i> Upload Picture
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Security Tab -->
+        <div class="tab-pane fade" id="security" role="tabpanel">
+            <div class="form-section mt-4">
+                <h3 class="form-section-title">Security Settings</h3>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i>
+                    <strong>Password Management:</strong> To change your password, use the "Change Password" option below.
+                </div>
+
+                <div class="list-group">
+                    <a href="{% url 'password_change' %}" class="list-group-item list-group-item-action">
+                        <i class="bi bi-key"></i> Change Password
+                        <i class="bi bi-chevron-right float-end"></i>
+                    </a>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-clock-history"></i> Last Login
+                            </div>
+                            <span class="badge bg-secondary">
+                                {% if user.last_login %}
+                                    {{ user.last_login|timesince }} ago
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-calendar-check"></i> Account Created
+                            </div>
+                            <span class="badge bg-secondary">
+                                {{ user.date_joined|format_date:"%d %b %Y" }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back to Dashboard Button -->
+    <div class="text-center mt-4 mb-5">
+        {% if is_patient %}
+            <a href="{% url 'detection:patient_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        {% elif is_staff %}
+            <a href="{% url 'detection:staff_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Dashboard
+            </a>
+        {% else %}
+            <a href="{% url 'home' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Home
+            </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/**
+ * Client-side validation for user profile forms.
+ * Implements dual-layer validation (skill #8) - client-side for UX, server-side for security.
+ */
+document.addEventListener('DOMContentLoaded', function() {
+    'use strict';
+
+    // Constants for validation
+    const VALIDATION_LIMITS = {
+        MIN_NAME_LENGTH: 2,
+        MAX_NAME_LENGTH: 150,
+        MAX_EMAIL_LENGTH: 254,
+        MAX_FILE_SIZE_MB: 5,
+        MAX_FILE_SIZE_BYTES: 5 * 1024 * 1024,
+        PHONE_PATTERN: /^(\+?6?01)[0-9]-?[0-9]{3,4}-?[0-9]{4}$/
+    };
+
+    /**
+     * Format file size in human-readable format.
+     */
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    /**
+     * Set validation state on a form field.
+     */
+    function setValidationState(field, isValid, feedbackId, message) {
+        const feedback = document.getElementById(feedbackId);
+
+        field.classList.remove('is-valid', 'is-invalid');
+        field.classList.add(isValid ? 'is-valid' : 'is-invalid');
+
+        if (feedback) {
+            feedback.className = 'validation-feedback ' + (isValid ? 'valid' : 'invalid');
+            feedback.textContent = message || '';
+        }
+    }
+
+    /**
+     * Clear validation state from a form field.
+     */
+    function clearValidationState(field, feedbackId) {
+        field.classList.remove('is-valid', 'is-invalid');
+        const feedback = document.getElementById(feedbackId);
+        if (feedback) {
+            feedback.className = 'validation-feedback';
+            feedback.textContent = '';
+        }
+    }
+
+    /**
+     * Validate email format.
+     */
+    function validateEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    /**
+     * Validate name (first name or last name).
+     */
+    function validateName(name) {
+        const trimmed = name.trim();
+        if (trimmed.length < VALIDATION_LIMITS.MIN_NAME_LENGTH) {
+            return { valid: false, message: 'Must be at least 2 characters' };
+        }
+        if (trimmed.length > VALIDATION_LIMITS.MAX_NAME_LENGTH) {
+            return { valid: false, message: 'Cannot exceed 150 characters' };
+        }
+        // Only allow letters, spaces, hyphens, apostrophes
+        if (!/^[a-zA-Z\s'-]+$/.test(trimmed)) {
+            return { valid: false, message: 'Only letters, spaces, hyphens, and apostrophes allowed' };
+        }
+        return { valid: true, message: '' };
+    }
+
+    /**
+     * Validate Malaysian phone number.
+     */
+    function validatePhone(phone) {
+        if (!phone || phone.trim() === '') {
+            return { valid: true, message: '' }; // Phone is optional
+        }
+        const cleaned = phone.replace(/[\s-]/g, '');
+        if (!VALIDATION_LIMITS.PHONE_PATTERN.test(cleaned)) {
+            return { valid: false, message: 'Use Malaysian format: 012-3456-7890' };
+        }
+        return { valid: true, message: 'Valid phone number' };
+    }
+
+    // ========================================
+    // Basic Info Form Validation
+    // ========================================
+    const basicInfoForm = document.getElementById('basic-info-form');
+    if (basicInfoForm) {
+        // Email validation
+        const emailField = basicInfoForm.querySelector('input[type="email"]');
+        if (emailField) {
+            emailField.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value === '') {
+                    setValidationState(this, false, 'email-validation-feedback', 'Email is required');
+                } else if (!validateEmail(value)) {
+                    setValidationState(this, false, 'email-validation-feedback', 'Enter a valid email address');
+                } else {
+                    setValidationState(this, true, 'email-validation-feedback', '');
+                }
+            });
+
+            emailField.addEventListener('input', function() {
+                if (this.value.trim() && validateEmail(this.value.trim())) {
+                    clearValidationState(this, 'email-validation-feedback');
+                }
+            });
+        }
+
+        // First name validation
+        const firstNameField = basicInfoForm.querySelector('input[name="first_name"]');
+        if (firstNameField) {
+            firstNameField.addEventListener('blur', function() {
+                const result = validateName(this.value);
+                if (this.value.trim() === '') {
+                    setValidationState(this, false, 'first-name-validation-feedback', 'First name is required');
+                } else if (!result.valid) {
+                    setValidationState(this, false, 'first-name-validation-feedback', result.message);
+                } else {
+                    setValidationState(this, true, 'first-name-validation-feedback', '');
+                }
+            });
+
+            firstNameField.addEventListener('input', function() {
+                const result = validateName(this.value);
+                if (result.valid) {
+                    clearValidationState(this, 'first-name-validation-feedback');
+                }
+            });
+        }
+
+        // Last name validation
+        const lastNameField = basicInfoForm.querySelector('input[name="last_name"]');
+        if (lastNameField) {
+            lastNameField.addEventListener('blur', function() {
+                const result = validateName(this.value);
+                if (this.value.trim() === '') {
+                    setValidationState(this, false, 'last-name-validation-feedback', 'Last name is required');
+                } else if (!result.valid) {
+                    setValidationState(this, false, 'last-name-validation-feedback', result.message);
+                } else {
+                    setValidationState(this, true, 'last-name-validation-feedback', '');
+                }
+            });
+
+            lastNameField.addEventListener('input', function() {
+                const result = validateName(this.value);
+                if (result.valid) {
+                    clearValidationState(this, 'last-name-validation-feedback');
+                }
+            });
+        }
+
+        // Phone validation
+        const phoneField = basicInfoForm.querySelector('input[name="phone"]');
+        if (phoneField) {
+            phoneField.addEventListener('blur', function() {
+                const result = validatePhone(this.value);
+                if (!result.valid) {
+                    setValidationState(this, false, 'phone-validation-feedback', result.message);
+                } else if (this.value.trim()) {
+                    setValidationState(this, true, 'phone-validation-feedback', result.message);
+                } else {
+                    clearValidationState(this, 'phone-validation-feedback');
+                }
+            });
+
+            phoneField.addEventListener('input', function() {
+                const result = validatePhone(this.value);
+                if (result.valid || this.value.trim() === '') {
+                    clearValidationState(this, 'phone-validation-feedback');
+                }
+            });
+        }
+
+        // Form submission validation
+        basicInfoForm.addEventListener('submit', function(e) {
+            let isValid = true;
+
+            // Validate email
+            if (emailField) {
+                const emailValue = emailField.value.trim();
+                if (!emailValue || !validateEmail(emailValue)) {
+                    setValidationState(emailField, false, 'email-validation-feedback',
+                        !emailValue ? 'Email is required' : 'Enter a valid email address');
+                    isValid = false;
+                }
+            }
+
+            // Validate first name
+            if (firstNameField) {
+                const result = validateName(firstNameField.value);
+                if (!firstNameField.value.trim() || !result.valid) {
+                    setValidationState(firstNameField, false, 'first-name-validation-feedback',
+                        !firstNameField.value.trim() ? 'First name is required' : result.message);
+                    isValid = false;
+                }
+            }
+
+            // Validate last name
+            if (lastNameField) {
+                const result = validateName(lastNameField.value);
+                if (!lastNameField.value.trim() || !result.valid) {
+                    setValidationState(lastNameField, false, 'last-name-validation-feedback',
+                        !lastNameField.value.trim() ? 'Last name is required' : result.message);
+                    isValid = false;
+                }
+            }
+
+            // Validate phone (if provided)
+            if (phoneField && phoneField.value.trim()) {
+                const result = validatePhone(phoneField.value);
+                if (!result.valid) {
+                    setValidationState(phoneField, false, 'phone-validation-feedback', result.message);
+                    isValid = false;
+                }
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                // Focus first invalid field
+                const firstInvalid = basicInfoForm.querySelector('.is-invalid');
+                if (firstInvalid) {
+                    firstInvalid.focus();
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // Profile Picture Form Validation
+    // ========================================
+    const pictureForm = document.getElementById('picture-form');
+    if (pictureForm) {
+        const fileInput = pictureForm.querySelector('input[type="file"]');
+        const fileSizeInfo = document.getElementById('file-size-info');
+        const previewContainer = document.getElementById('picture-preview-container');
+        const previewImg = document.getElementById('picture-preview');
+        const uploadBtn = document.getElementById('upload-picture-btn');
+
+        if (fileInput) {
+            fileInput.addEventListener('change', function(e) {
+                const file = this.files[0];
+
+                if (!file) {
+                    if (fileSizeInfo) {
+                        fileSizeInfo.textContent = '';
+                        fileSizeInfo.className = 'file-size-info';
+                    }
+                    if (previewContainer) {
+                        previewContainer.style.display = 'none';
+                    }
+                    return;
+                }
+
+                // Check file size
+                const fileSize = file.size;
+                const fileSizeFormatted = formatFileSize(fileSize);
+
+                if (fileSizeInfo) {
+                    if (fileSize > VALIDATION_LIMITS.MAX_FILE_SIZE_BYTES) {
+                        fileSizeInfo.textContent = `File size: ${fileSizeFormatted} - Too large! Maximum: 5MB`;
+                        fileSizeInfo.className = 'file-size-info error';
+                        if (uploadBtn) uploadBtn.disabled = true;
+                    } else if (fileSize > VALIDATION_LIMITS.MAX_FILE_SIZE_BYTES * 0.8) {
+                        fileSizeInfo.textContent = `File size: ${fileSizeFormatted} - Close to limit (5MB max)`;
+                        fileSizeInfo.className = 'file-size-info warning';
+                        if (uploadBtn) uploadBtn.disabled = false;
+                    } else {
+                        fileSizeInfo.textContent = `File size: ${fileSizeFormatted}`;
+                        fileSizeInfo.className = 'file-size-info';
+                        if (uploadBtn) uploadBtn.disabled = false;
+                    }
+                }
+
+                // Check file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    if (fileSizeInfo) {
+                        fileSizeInfo.textContent = 'Invalid file type. Please upload JPEG or PNG.';
+                        fileSizeInfo.className = 'file-size-info error';
+                    }
+                    if (uploadBtn) uploadBtn.disabled = true;
+                    if (previewContainer) previewContainer.style.display = 'none';
+                    return;
+                }
+
+                // Show preview
+                if (previewContainer && previewImg && fileSize <= VALIDATION_LIMITS.MAX_FILE_SIZE_BYTES) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        previewImg.src = e.target.result;
+                        previewContainer.style.display = 'block';
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+
+        // Form submission validation
+        pictureForm.addEventListener('submit', function(e) {
+            if (fileInput && fileInput.files[0]) {
+                const file = fileInput.files[0];
+
+                // Validate file size
+                if (file.size > VALIDATION_LIMITS.MAX_FILE_SIZE_BYTES) {
+                    e.preventDefault();
+                    if (fileSizeInfo) {
+                        fileSizeInfo.textContent = 'File too large. Please select a file under 5MB.';
+                        fileSizeInfo.className = 'file-size-info error';
+                    }
+                    return;
+                }
+
+                // Validate file type
+                const validTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+                if (!validTypes.includes(file.type)) {
+                    e.preventDefault();
+                    if (fileSizeInfo) {
+                        fileSizeInfo.textContent = 'Invalid file type. Please upload JPEG or PNG.';
+                        fileSizeInfo.className = 'file-size-info error';
+                    }
+                    return;
+                }
+            }
+        });
+    }
+
+    // ========================================
+    // Patient Info Form Validation (if exists)
+    // ========================================
+    const patientInfoForm = document.getElementById('patient-info-form');
+    if (patientInfoForm) {
+        // Date of birth validation
+        const dobField = patientInfoForm.querySelector('input[type="date"]');
+        if (dobField) {
+            // Set max date to today
+            const today = new Date().toISOString().split('T')[0];
+            dobField.setAttribute('max', today);
+
+            dobField.addEventListener('change', function() {
+                const selectedDate = new Date(this.value);
+                const now = new Date();
+
+                if (selectedDate > now) {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                } else {
+                    this.classList.add('is-valid');
+                    this.classList.remove('is-invalid');
+                }
+            });
+        }
+
+        // Emergency contact validation
+        const emergencyField = patientInfoForm.querySelector('input[name="emergency_contact"]');
+        if (emergencyField) {
+            emergencyField.addEventListener('blur', function() {
+                const value = this.value.trim();
+                if (value && value.length < 5) {
+                    this.classList.add('is-invalid');
+                    this.classList.remove('is-valid');
+                } else if (value) {
+                    this.classList.add('is-valid');
+                    this.classList.remove('is-invalid');
+                } else {
+                    this.classList.remove('is-valid', 'is-invalid');
+                }
+            });
+        }
+    }
+
+    console.log('Profile form validation initialized successfully.');
+});
+</script>
+{% endblock %}

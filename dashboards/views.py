@@ -168,7 +168,7 @@ def enhanced_admin_dashboard(request):
     ).order_by('-triggered_at')[:5]
 
     # Recent activities
-    recent_activities = AuditLog.objects.select_related('user').order_by('-timestamp')[:10]
+    recent_activities = AuditLog.objects.select_related('user').order_by('-created_at')[:10]
 
     # Model performance (simplified)
     avg_inference_time = Prediction.objects.aggregate(

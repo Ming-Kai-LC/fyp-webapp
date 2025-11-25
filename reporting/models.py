@@ -1,12 +1,16 @@
 from django.db import models
 from django.conf import settings
 from detection.models import Prediction, Patient
+from common.models import TimeStampedModel, TimeStampedAuditableModel
 import uuid
 
 
-class ReportTemplate(models.Model):
+class ReportTemplate(TimeStampedModel):
     """
     Defines different report templates with customizable layouts
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     TEMPLATE_TYPES = (
         ('standard', 'Standard Report'),
@@ -21,8 +25,7 @@ class ReportTemplate(models.Model):
     html_template = models.TextField(help_text="HTML template content")
     css_styles = models.TextField(blank=True, help_text="Custom CSS")
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     class Meta:
         ordering = ['template_type', 'name']
@@ -31,9 +34,13 @@ class ReportTemplate(models.Model):
         return f"{self.get_template_type_display()} - {self.name}"
 
 
-class Report(models.Model):
+class Report(TimeStampedAuditableModel):
     """
     Stores generated reports with metadata for tracking and versioning
+
+    Inherits from TimeStampedAuditableModel:
+    - Timestamps: created_at (generated_at), updated_at
+    - Audit: created_by (generated_by), updated_by
     """
     REPORT_STATUS = (
         ('draft', 'Draft'),
@@ -49,8 +56,7 @@ class Report(models.Model):
 
     # Report metadata
     title = models.CharField(max_length=200, default="COVID-19 Detection Report")
-    generated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='generated_reports')
-    generated_at = models.DateTimeField(auto_now_add=True)
+    # Note: generated_at is now created_at, generated_by is now created_by (inherited)
 
     # File storage
     pdf_file = models.FileField(upload_to='reports/pdf/%Y/%m/%d/', null=True, blank=True)
@@ -75,14 +81,14 @@ class Report(models.Model):
     custom_notes = models.TextField(blank=True, help_text="Additional notes for the report")
 
     class Meta:
-        ordering = ['-generated_at']
+        ordering = ['-created_at']
         indexes = [
             models.Index(fields=['report_id']),
-            models.Index(fields=['patient', '-generated_at']),
+            models.Index(fields=['patient', '-created_at']),
         ]
 
     def __str__(self):
-        return f"Report {self.report_id} - {self.patient.user.get_full_name()} - {self.generated_at.strftime('%Y-%m-%d')}"
+        return f"Report {self.report_id} - {self.patient.user.get_full_name()} - {self.created_at.strftime('%Y-%m-%d')}"
 
     def increment_download_count(self):
         from django.utils import timezone
@@ -91,9 +97,13 @@ class Report(models.Model):
         self.save(update_fields=['downloaded_count', 'last_downloaded_at'])
 
 
-class BatchReportJob(models.Model):
+class BatchReportJob(TimeStampedAuditableModel):
     """
     Tracks batch report generation jobs for multiple patients
+
+    Inherits from TimeStampedAuditableModel:
+    - Timestamps: created_at, updated_at
+    - Audit: created_by, updated_by
     """
     JOB_STATUS = (
         ('pending', 'Pending'),
@@ -103,8 +113,7 @@ class BatchReportJob(models.Model):
     )
 
     job_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
-    created_at = models.DateTimeField(auto_now_add=True)
+    # Note: created_by and created_at inherited from TimeStampedAuditableModel
     completed_at = models.DateTimeField(null=True, blank=True)
 
     # Job configuration

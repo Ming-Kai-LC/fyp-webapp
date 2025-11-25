@@ -244,24 +244,61 @@
                     <span class="topbar-badge" id="notification-badge" style="display: none;">0</span>
                 </button>
 
-                <div class="topbar-user" onclick="window.location.href='{% url 'notifications:preferences' %}'">
-                    <div class="topbar-user-avatar">
-                        {{ user.username|slice:":1"|upper }}
-                    </div>
-                    <div class="topbar-user-info">
-                        <span class="topbar-user-name">{{ user.username }}</span>
-                        <span class="topbar-user-role">
-                            {% if user.profile.is_admin %}Admin
-                            {% elif user.profile.is_staff %}Staff
-                            {% elif user.profile.is_patient %}Patient
+                <!-- User Dropdown Menu -->
+                <div class="dropdown">
+                    <button class="topbar-user dropdown-toggle" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false" style="border: none; background: transparent; cursor: pointer;">
+                        {% if user.profile.profile_picture %}
+                            <img src="{{ user.profile.profile_picture.url }}" alt="{{ user.username }}" class="topbar-user-avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover;">
+                        {% else %}
+                            <div class="topbar-user-avatar">
+                                {{ user.username|slice:":1"|upper }}
+                            </div>
+                        {% endif %}
+                        <div class="topbar-user-info">
+                            <span class="topbar-user-name">{{ user.username }}</span>
+                            <span class="topbar-user-role">
+                                {% if user.profile.is_admin %}Admin
+                                {% elif user.profile.is_staff %}Staff
+                                {% elif user.profile.is_patient %}Patient
+                                {% endif %}
+                            </span>
+                        </div>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'detection:user_profile' %}">
+                                <i class="bi bi-person-circle"></i> My Profile
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            {% if user.profile.is_patient %}
+                                <a class="dropdown-item" href="{% url 'detection:patient_dashboard' %}">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                            {% elif user.profile.is_staff %}
+                                <a class="dropdown-item" href="{% url 'detection:staff_dashboard' %}">
+                                    <i class="bi bi-speedometer2"></i> Dashboard
+                                </a>
+                            {% elif user.profile.is_admin %}
+                                <a class="dropdown-item" href="{% url 'admin:index' %}">
+                                    <i class="bi bi-gear"></i> Admin Panel
+                                </a>
                             {% endif %}
-                        </span>
-                    </div>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'notifications:preferences' %}">
+                                <i class="bi bi-gear-fill"></i> Settings
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Logout
+                            </a>
+                        </li>
+                    </ul>
                 </div>
-
-                <button class="topbar-btn" title="Logout" onclick="window.location.href='{% url 'logout' %}'">
-                    <i class="bi bi-box-arrow-right"></i>
-                </button>
             </div>
         </header>
         {% else %}
@@ -310,9 +347,14 @@
         </header>
         {% endif %}
 
-        <!-- Main Content Area -->
-        <div class="main-wrapper">
-            <main class="main-content {% if not user.is_authenticated %}visitor-content{% endif %}">
+        <!-- Content area with topbar spacing for authenticated users -->
+        <div class="{% if user.is_authenticated %}content-with-topbar{% endif %}">
+            <!-- Profile Completion Banner -->
+            {% include 'components/profile_completion_banner.html' %}
+
+            <!-- Main Content Area -->
+            <div class="main-wrapper">
+                <main class="main-content main-content-no-margin {% if not user.is_authenticated %}visitor-content{% endif %}">
                 <!-- Messages -->
                 {% if messages %}
                     <div class="{% if user.is_authenticated %}mb-4{% else %}container mb-3{% endif %}">
@@ -329,6 +371,7 @@
                 {% block content %}
                 {% endblock %}
             </main>
+            </div>
         </div>
     </div>
 

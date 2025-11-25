@@ -3,12 +3,16 @@ from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes.fields import GenericForeignKey
 from django.utils import timezone
+from common.models import TimeStampedModel
 import json
 
 
-class AuditLog(models.Model):
+class AuditLog(TimeStampedModel):
     """
     Comprehensive audit trail for all system activities
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (log time), updated_at
     """
     ACTION_TYPES = (
         ('create', 'Create'),
@@ -49,8 +53,7 @@ class AuditLog(models.Model):
     action_description = models.CharField(max_length=500)
     severity = models.CharField(max_length=10, choices=SEVERITY_LEVELS, default='info')
 
-    # When
-    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    # When - Note: timestamp is now created_at (inherited from TimeStampedModel)
 
     # Where (network info)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -72,16 +75,16 @@ class AuditLog(models.Model):
     error_message = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['user', '-timestamp']),
-            models.Index(fields=['action_type', '-timestamp']),
-            models.Index(fields=['timestamp']),
+            models.Index(fields=['user', '-created_at']),
+            models.Index(fields=['action_type', '-created_at']),
+            models.Index(fields=['created_at']),
             models.Index(fields=['content_type', 'object_id']),
         ]
 
     def __str__(self):
-        return f"{self.username or 'Anonymous'} - {self.action_type} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"{self.username or 'Anonymous'} - {self.action_type} - {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
 
     @classmethod
     def log(cls, user, action_type, description, **kwargs):
@@ -97,9 +100,12 @@ class AuditLog(models.Model):
         )
 
 
-class DataAccessLog(models.Model):
+class DataAccessLog(TimeStampedModel):
     """
     Specific tracking for patient data access (HIPAA compliance)
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (access time), updated_at
     """
     ACCESS_TYPES = (
         ('view', 'View'),
@@ -131,8 +137,7 @@ class DataAccessLog(models.Model):
     access_type = models.CharField(max_length=20, choices=ACCESS_TYPES)
     access_reason = models.TextField(blank=True, help_text="Purpose of access")
 
-    # When
-    accessed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # When - Note: accessed_at is now created_at (inherited from TimeStampedModel)
 
     # Where
     ip_address = models.GenericIPAddressField(null=True, blank=True)
@@ -146,10 +151,10 @@ class DataAccessLog(models.Model):
     review_notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-accessed_at']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['patient', '-accessed_at']),
-            models.Index(fields=['accessor', '-accessed_at']),
+            models.Index(fields=['patient', '-created_at']),
+            models.Index(fields=['accessor', '-created_at']),
             models.Index(fields=['flagged_for_review']),
         ]
 
@@ -157,13 +162,16 @@ class DataAccessLog(models.Model):
         return f"{self.accessor.username if self.accessor else 'Unknown'} accessed {self.patient.user.get_full_name()}'s {self.data_type}"
 
 
-class LoginAttempt(models.Model):
+class LoginAttempt(TimeStampedModel):
     """
     Track all login attempts for security monitoring
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (attempt time), updated_at
     """
     username = models.CharField(max_length=150, db_index=True)
     success = models.BooleanField()
-    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Note: timestamp is now created_at (inherited from TimeStampedModel)
     ip_address = models.GenericIPAddressField()
     user_agent = models.TextField(blank=True)
     failure_reason = models.CharField(max_length=200, blank=True)
@@ -173,21 +181,24 @@ class LoginAttempt(models.Model):
     blocked = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['-timestamp']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['username', '-timestamp']),
-            models.Index(fields=['ip_address', '-timestamp']),
+            models.Index(fields=['username', '-created_at']),
+            models.Index(fields=['ip_address', '-created_at']),
             models.Index(fields=['is_suspicious']),
         ]
 
     def __str__(self):
         status = "Success" if self.success else "Failed"
-        return f"{self.username} - {status} - {self.timestamp.strftime('%Y-%m-%d %H:%M:%S')}"
+        return f"{self.username} - {status} - {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}"
 
 
-class DataChange(models.Model):
+class DataChange(TimeStampedModel):
     """
     Track changes to critical medical data with full history
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (change time), updated_at
     """
     # What was changed
     content_type = models.ForeignKey(ContentType, on_delete=models.CASCADE)
@@ -202,8 +213,7 @@ class DataChange(models.Model):
         related_name='data_changes'
     )
 
-    # When
-    changed_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # When - Note: changed_at is now created_at (inherited from TimeStampedModel)
 
     # Details
     field_name = models.CharField(max_length=100)
@@ -214,18 +224,21 @@ class DataChange(models.Model):
     change_reason = models.TextField(blank=True)
 
     class Meta:
-        ordering = ['-changed_at']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['content_type', 'object_id', '-changed_at']),
+            models.Index(fields=['content_type', 'object_id', '-created_at']),
         ]
 
     def __str__(self):
         return f"{self.field_name} changed by {self.changed_by.username if self.changed_by else 'System'}"
 
 
-class ComplianceReport(models.Model):
+class ComplianceReport(TimeStampedModel):
     """
     Generated compliance reports for regulatory review
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (generated time), updated_at
     """
     REPORT_TYPES = (
         ('hipaa_audit', 'HIPAA Audit Report'),
@@ -241,7 +254,7 @@ class ComplianceReport(models.Model):
         on_delete=models.SET_NULL,
         null=True
     )
-    generated_at = models.DateTimeField(auto_now_add=True)
+    # Note: generated_at is now created_at (inherited from TimeStampedModel)
 
     # Date range for report
     start_date = models.DateTimeField()
@@ -255,22 +268,24 @@ class ComplianceReport(models.Model):
     pdf_file = models.FileField(upload_to='compliance_reports/%Y/%m/', null=True, blank=True)
 
     class Meta:
-        ordering = ['-generated_at']
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.get_report_type_display()} - {self.generated_at.strftime('%Y-%m-%d')}"
+        return f"{self.get_report_type_display()} - {self.created_at.strftime('%Y-%m-%d')}"
 
 
-class DataRetentionPolicy(models.Model):
+class DataRetentionPolicy(TimeStampedModel):
     """
     Define and enforce data retention policies
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at, updated_at
     """
     data_type = models.CharField(max_length=100, unique=True)
     retention_days = models.IntegerField(help_text="Number of days to retain data")
     description = models.TextField()
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+    # created_at, updated_at inherited from TimeStampedModel
 
     # Enforcement
     auto_delete = models.BooleanField(
@@ -289,9 +304,12 @@ class DataRetentionPolicy(models.Model):
         return f"{self.data_type} - {self.retention_days} days"
 
 
-class SecurityAlert(models.Model):
+class SecurityAlert(TimeStampedModel):
     """
     Real-time security alerts for suspicious activities
+
+    Inherits from TimeStampedModel:
+    - Timestamps: created_at (triggered time), updated_at
     """
     ALERT_TYPES = (
         ('failed_login', 'Multiple Failed Logins'),
@@ -312,7 +330,7 @@ class SecurityAlert(models.Model):
     alert_type = models.CharField(max_length=50, choices=ALERT_TYPES)
     severity = models.CharField(max_length=10, choices=ALERT_SEVERITY)
     description = models.TextField()
-    triggered_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    # Note: triggered_at is now created_at (inherited from TimeStampedModel)
 
     # Related user
     user = models.ForeignKey(
@@ -341,11 +359,11 @@ class SecurityAlert(models.Model):
     admin_notified = models.BooleanField(default=False)
 
     class Meta:
-        ordering = ['-triggered_at']
+        ordering = ['-created_at']
         indexes = [
-            models.Index(fields=['acknowledged', '-triggered_at']),
-            models.Index(fields=['severity', '-triggered_at']),
+            models.Index(fields=['acknowledged', '-created_at']),
+            models.Index(fields=['severity', '-created_at']),
         ]
 
     def __str__(self):
-        return f"{self.get_alert_type_display()} - {self.severity} - {self.triggered_at.strftime('%Y-%m-%d %H:%M')}"
+        return f"{self.get_alert_type_display()} - {self.severity} - {self.created_at.strftime('%Y-%m-%d %H:%M')}"
